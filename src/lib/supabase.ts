@@ -53,9 +53,11 @@ export async function submitScore(
   return { success: true };
 }
 
+const LEADERBOARD_SIZE = 100;
+
 export async function fetchLeaderboard(
   inputMode?: InputMode,
-  limit = 100
+  limit = LEADERBOARD_SIZE
 ): Promise<LeaderboardEntry[]> {
   if (!supabase) {
     return [];
@@ -79,4 +81,22 @@ export async function fetchLeaderboard(
   }
 
   return data || [];
+}
+
+export async function checkScoreQualifies(
+  score: number,
+  inputMode: InputMode
+): Promise<boolean> {
+  if (!supabase) {
+    return false;
+  }
+
+  const leaderboard = await fetchLeaderboard(inputMode, LEADERBOARD_SIZE);
+  
+  if (leaderboard.length < LEADERBOARD_SIZE) {
+    return true;
+  }
+  
+  const lowestScore = leaderboard[leaderboard.length - 1].score;
+  return score > lowestScore;
 }

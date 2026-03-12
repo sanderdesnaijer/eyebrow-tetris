@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { GameScreen } from "@/components/GameScreen";
 import { ScoreSubmitModal } from "@/components/ScoreSubmitModal";
+import { GameOverModal } from "@/components/GameOverModal";
 import type { GameStats } from "@/components/TetrisOverlay";
+import { checkScoreQualifies } from "@/lib/supabase";
 
 export default function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
 
   const handlePlay = () => {
@@ -20,9 +23,16 @@ export default function HomePage() {
     setIsPlaying(false);
   };
 
-  const handleGameOver = (stats: GameStats) => {
+  const handleGameOver = async (stats: GameStats) => {
     setGameStats(stats);
-    setShowScoreModal(true);
+    
+    const qualifies = await checkScoreQualifies(stats.score, stats.inputMode);
+    
+    if (qualifies) {
+      setShowScoreModal(true);
+    } else {
+      setShowGameOverModal(true);
+    }
   };
 
   const handleScoreSubmitted = () => {
@@ -32,6 +42,11 @@ export default function HomePage() {
 
   const handleScoreModalClose = () => {
     setShowScoreModal(false);
+    setGameStats(null);
+  };
+
+  const handleGameOverModalClose = () => {
+    setShowGameOverModal(false);
     setGameStats(null);
   };
 
@@ -111,6 +126,10 @@ export default function HomePage() {
           onSubmit={handleScoreSubmitted}
           onClose={handleScoreModalClose}
         />
+      )}
+
+      {showGameOverModal && gameStats && (
+        <GameOverModal stats={gameStats} onClose={handleGameOverModalClose} />
       )}
     </>
   );

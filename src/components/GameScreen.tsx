@@ -373,9 +373,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       const leftLiftVel = (physics.prevLeftY - leftBrowY) / Math.max(dt, 0.001);
       const rightLiftVel = (physics.prevRightY - rightBrowY) / Math.max(dt, 0.001);
       
-      // Smooth the velocities
-      physics.leftLiftVel = physics.leftLiftVel * 0.7 + leftLiftVel * 0.3;
-      physics.rightLiftVel = physics.rightLiftVel * 0.7 + rightLiftVel * 0.3;
+      // Smooth the velocities - more responsive to quick movements
+      physics.leftLiftVel = physics.leftLiftVel * 0.5 + leftLiftVel * 0.5;
+      physics.rightLiftVel = physics.rightLiftVel * 0.5 + rightLiftVel * 0.5;
       
       physics.prevLeftY = leftBrowY;
       physics.prevRightY = rightBrowY;
@@ -437,13 +437,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         physics.wobble = Math.sin(now * 0.015) * Math.min(0.2, combinedVelocity * 0.05);
       }
 
-      // Vertical bounce physics
-      const bounceForce = avgBrowLift * 500; // Convert lift velocity to bounce
+      // Vertical bounce physics - snappy and bouncy!
+      const bounceForce = avgBrowLift * 1200; // Strong bounce from brow velocity
       physics.yVel += bounceForce * dt;
-      physics.yVel += (-physics.yOffset * 15) * dt; // Spring back
-      physics.yVel *= 0.88; // Damping
+      physics.yVel += (-physics.yOffset * 45) * dt; // Strong spring for snappy return
+      physics.yVel *= 0.82; // Less damping = bouncier feel
       physics.yOffset += physics.yVel * dt;
-      physics.yOffset = Math.max(-50, Math.min(30, physics.yOffset)); // Clamp
+      physics.yOffset = Math.max(-60, Math.min(40, physics.yOffset)); // Clamp with more range
 
       // Calculate position between eyebrows
       // Use MediaPipe indices correctly for mirrored video
@@ -471,9 +471,15 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       const totalRotation = physics.rotation + physics.wobble;
       ctx.rotate(totalRotation);
 
+      // Squash/stretch effect based on vertical velocity for bouncy feel
+      const squashStretch = Math.min(Math.abs(physics.yVel) * 0.003, 0.25);
+      const isGoingUp = physics.yVel < 0;
+      const scaleX = isGoingUp ? 1 - squashStretch * 0.5 : 1 + squashStretch * 0.6;
+      const scaleY = isGoingUp ? 1 + squashStretch * 0.8 : 1 - squashStretch * 0.5;
+
       // Scale effect when spinning fast
       const spinScale = physics.isSpinning ? 1 + Math.abs(physics.rotationVel) * 0.02 : 1;
-      ctx.scale(spinScale, spinScale);
+      ctx.scale(scaleX * spinScale, scaleY * spinScale);
 
       // Draw the Tetris piece
       ctx.globalAlpha = physics.isSpinning ? 0.85 : 0.95;
@@ -1561,11 +1567,12 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-50 flex flex-row overflow-hidden bg-[var(--background)] ${
+      className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[var(--background)] ${
         lineClearFlash.active ? "animate-screen-shake-intense" : ""
       }`}
     >
-      <div className="relative flex min-h-0 min-w-0 flex-1">
+      <div className="flex h-full w-full max-w-5xl flex-row">
+        <div className="relative flex min-h-0 min-w-0 flex-1">
         <video
           ref={videoRef}
           playsInline
@@ -1822,6 +1829,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
             </span>
           )}
         </div>
+      </div>
       </div>
 
       {(status === "requesting" || status === "loading") && (
