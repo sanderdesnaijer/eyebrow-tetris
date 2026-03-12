@@ -1,20 +1,15 @@
 "use client";
 
-import {
-  FaceLandmarker,
-  FilesetResolver,
-} from "@mediapipe/tasks-vision";
+import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   TetrisOverlay,
   type TetrisOverlayRef,
   type GameStats,
-  type TetrisPiece,
   TETRIS_COLORS,
 } from "./TetrisOverlay";
 
-const MEDIAPIPE_NOISE_RE =
-  /^\s*(INFO: |[IW]\d{4} |Graph successfully started)/;
+const MEDIAPIPE_NOISE_RE = /^\s*(INFO: |[IW]\d{4} |Graph successfully started)/;
 
 let mediaPipeLogFilterInstalled = false;
 
@@ -50,7 +45,7 @@ function getBlendshapeScore(
   classifications:
     | { categories: { categoryName: string; score: number }[] }
     | undefined,
-  name: string
+  name: string,
 ): number {
   if (!classifications?.categories) return 0;
   const b = classifications.categories.find((x) => x.categoryName === name);
@@ -75,16 +70,28 @@ const LEFT_BROW_INDICES = [70, 63, 105, 66, 107];
 const RIGHT_BROW_INDICES = [300, 293, 334, 296, 336];
 
 // Outer brow landmarks (near the temples/ears) - these move the most when raising a single brow
-const LEFT_OUTER_BROW_IDX = 70;   // Leftmost point of left eyebrow
+const LEFT_OUTER_BROW_IDX = 70; // Leftmost point of left eyebrow
 const RIGHT_OUTER_BROW_IDX = 300; // Rightmost point of right eyebrow
 
 // Reference landmarks for measuring brow lift (outer eye corners)
-const LEFT_EYE_OUTER_IDX = 33;    // Outer corner of left eye
-const RIGHT_EYE_OUTER_IDX = 263;  // Outer corner of right eye
+const LEFT_EYE_OUTER_IDX = 33; // Outer corner of left eye
+const RIGHT_EYE_OUTER_IDX = 263; // Outer corner of right eye
 
 // For face height normalization
 const NOSE_TIP_IDX = 4;
 const FOREHEAD_IDX = 10;
+
+// Eye landmarks for googly eyes
+const LEFT_EYE_CENTER_IDX = 468; // Left iris center (if available) or use eye landmarks
+const RIGHT_EYE_CENTER_IDX = 473; // Right iris center (if available)
+const LEFT_EYE_TOP_IDX = 159;
+const LEFT_EYE_BOTTOM_IDX = 145;
+const LEFT_EYE_INNER_IDX = 133;
+const LEFT_EYE_OUTER_IDX_ALT = 33;
+const RIGHT_EYE_TOP_IDX = 386;
+const RIGHT_EYE_BOTTOM_IDX = 374;
+const RIGHT_EYE_INNER_IDX = 362;
+const RIGHT_EYE_OUTER_IDX_ALT = 263;
 
 export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,7 +107,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const prevLeftBrowRef = useRef(false);
   const prevRightBrowRef = useRef(false);
   const prevMouthOpenRef = useRef(false);
-  
+
   // Baseline brow positions (established when face is neutral)
   const leftBrowBaselineRef = useRef<number | null>(null);
   const rightBrowBaselineRef = useRef<number | null>(null);
@@ -114,7 +121,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const [leftBrowRaised, setLeftBrowRaised] = useState(false);
   const [rightBrowRaised, setRightBrowRaised] = useState(false);
   const [faceLost, setFaceLost] = useState(false);
-  const [faceLandmarks, setFaceLandmarks] = useState<FaceLandmark[] | null>(null);
+  const [faceLandmarks, setFaceLandmarks] = useState<FaceLandmark[] | null>(
+    null,
+  );
   const [showCalibration, setShowCalibration] = useState(false);
   const [blendshapeScores, setBlendshapeScores] = useState({
     browOuterUpLeft: 0,
@@ -131,13 +140,92 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const [lineClearFlash, setLineClearFlash] = useState<{
     active: boolean;
     intensity: number;
-  }>({ active: false, intensity: 1 });
+    linesCleared: number;
+  }>({ active: false, intensity: 1, linesCleared: 0 });
+  const [showGooglyEyes, setShowGooglyEyes] = useState(false);
+  const [showLandmarks, setShowLandmarks] = useState(true);
+  const [stackDanger, setStackDanger] = useState({
+    isInDanger: false,
+    dangerLevel: 0,
+  });
+  const googlyPupilRef = useRef({
+    leftX: 0,
+    leftY: 0,
+    leftVelX: 0,
+    leftVelY: 0,
+    rightX: 0,
+    rightY: 0,
+    rightVelX: 0,
+    rightVelY: 0,
+    lastTime: Date.now(),
+  });
+  const faceRotationRef = useRef({ pitch: 0, yaw: 0 });
+  const facePosRef = useRef({ x: 0, y: 0, lastX: 0, lastY: 0 });
   const isStartingRef = useRef(false);
+
+  // Eyebrow physics state for the "Next Piece" block balancing on brows
+  const browPhysicsRef = useRef({
+    // Position and velocity
+    rotation: 0, // Current rotation angle
+    rotationVel: 0, // Angular velocity
+    yOffset: 0, // Vertical bounce offset
+    yVel: 0, // Vertical velocity
+    wobble: 0, // Extra wobble amount
+    // Previous brow positions for velocity calculation
+    prevLeftY: 0,
+    prevRightY: 0,
+    leftLiftVel: 0, // How fast left brow is moving
+    rightLiftVel: 0, // How fast right brow is moving
+    lastTime: Date.now(),
+    // Spin state for wild spinning
+    spinAccumulator: 0,
+    isSpinning: false,
+  });
+
+  // Hard drop reaction bubble state
+  const [hardDropReaction, setHardDropReaction] = useState<{
+    active: boolean;
+    word: string;
+    startTime: number;
+  } | null>(null);
+
+  const HARD_DROP_WORDS = [
+    "THUMP!",
+    "BOOM!",
+    "WHAM!",
+    "BAM!",
+    "SLAM!",
+    "POW!",
+    "CRASH!",
+    "BONK!",
+    "SPLAT!",
+  ];
+
+  const triggerHardDropReaction = useCallback(() => {
+    const word =
+      HARD_DROP_WORDS[Math.floor(Math.random() * HARD_DROP_WORDS.length)];
+    setHardDropReaction({
+      active: true,
+      word,
+      startTime: Date.now(),
+    });
+    setTimeout(() => setHardDropReaction(null), 600);
+  }, []);
+
+  const getLineClearText = (lines: number): string => {
+    if (lines === 4) return "TETRIS!";
+    if (lines === 3) return "TRIPLE!";
+    if (lines === 2) return "DOUBLE!";
+    return "LINE!";
+  };
 
   const handleLineClear = useCallback((linesCleared: number) => {
     const intensity = Math.min(linesCleared, 4);
-    setLineClearFlash({ active: true, intensity });
-    setTimeout(() => setLineClearFlash({ active: false, intensity: 1 }), 800);
+    setLineClearFlash({ active: true, intensity, linesCleared });
+    setTimeout(
+      () => setLineClearFlash({ active: false, intensity: 1, linesCleared: 0 }),
+      800,
+    );
   }, []);
 
   const stopEverything = useCallback(() => {
@@ -173,7 +261,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    if (
+      canvas.width !== video.videoWidth ||
+      canvas.height !== video.videoHeight
+    ) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
     }
@@ -182,7 +273,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
     if (!faceLandmarks) return;
 
-    const drawLandmarkGroup = (indices: number[], isActive: boolean, closePath = false) => {
+    const drawLandmarkGroup = (
+      indices: number[],
+      isActive: boolean,
+      closePath = false,
+    ) => {
       const color = isActive ? "#22c55e" : "#ffffff";
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
@@ -220,89 +315,832 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
     // Note: Video is mirrored, so MediaPipe's LEFT_BROW_INDICES appear on the right
     // side of the screen (user's right brow), and vice versa
-    drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
-    drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
-    drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
-    
-    // Highlight the specific outer brow detection points with larger markers
-    const highlightDetectionPoint = (idx: number, isActive: boolean) => {
-      const point = faceLandmarks[idx];
-      if (point) {
-        const x = point.x * canvas.width;
-        const y = point.y * canvas.height;
-        ctx.beginPath();
-        ctx.arc(x, y, 6, 0, 2 * Math.PI);
-        ctx.fillStyle = isActive ? "#22c55e" : "#f59e0b";
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    };
-    
-    // Left outer brow point (appears on right side of mirrored video)
-    highlightDetectionPoint(LEFT_OUTER_BROW_IDX, rightBrowRaised);
-    // Right outer brow point (appears on left side of mirrored video)
-    highlightDetectionPoint(RIGHT_OUTER_BROW_IDX, leftBrowRaised);
+    if (showLandmarks) {
+      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
+      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
+      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
 
-    // Draw ghost piece hovering over eyebrows
-    const drawGhostPiece = (piece: TetrisPiece) => {
-      // Get center brow landmarks (middle points of each eyebrow)
-      const leftBrowCenter = faceLandmarks[LEFT_BROW_INDICES[2]];
-      const rightBrowCenter = faceLandmarks[RIGHT_BROW_INDICES[2]];
+      // Highlight the specific outer brow detection points with larger markers
+      const highlightDetectionPoint = (idx: number, isActive: boolean) => {
+        const point = faceLandmarks[idx];
+        if (point) {
+          const x = point.x * canvas.width;
+          const y = point.y * canvas.height;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = isActive ? "#22c55e" : "#f59e0b";
+          ctx.fill();
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      };
+
+      // Left outer brow point (appears on right side of mirrored video)
+      highlightDetectionPoint(LEFT_OUTER_BROW_IDX, rightBrowRaised);
+      // Right outer brow point (appears on left side of mirrored video)
+      highlightDetectionPoint(RIGHT_OUTER_BROW_IDX, leftBrowRaised);
+    }
+
+    // Next Piece balancing on eyebrows with physics!
+    // The piece sits on your brows and reacts to how you raise them
+    const nextPiece = tetrisRef.current?.getCurrentPiece?.();
+    
+    // Get both eyebrow positions
+    const leftBrowOuter = faceLandmarks[LEFT_OUTER_BROW_IDX];
+    const rightBrowOuter = faceLandmarks[RIGHT_OUTER_BROW_IDX];
+    const leftBrowCenter = faceLandmarks[LEFT_BROW_INDICES[2]];
+    const rightBrowCenter = faceLandmarks[RIGHT_BROW_INDICES[2]];
+
+    if (leftBrowOuter && rightBrowOuter && leftBrowCenter && rightBrowCenter && nextPiece) {
+      const physics = browPhysicsRef.current;
+      const now = Date.now();
+      const dt = Math.min((now - physics.lastTime) / 1000, 0.05);
+      physics.lastTime = now;
+
+      // Get brow Y positions (normalized)
+      // Note: Video is mirrored, so MediaPipe's left = screen right = user's right
+      const leftBrowY = rightBrowOuter.y; // User's left brow (MediaPipe right)
+      const rightBrowY = leftBrowOuter.y; // User's right brow (MediaPipe left)
+
+      // Calculate brow lift velocities (how fast brows are moving)
+      const leftLiftVel = (physics.prevLeftY - leftBrowY) / Math.max(dt, 0.001);
+      const rightLiftVel = (physics.prevRightY - rightBrowY) / Math.max(dt, 0.001);
       
-      if (!leftBrowCenter || !rightBrowCenter) return;
+      // Smooth the velocities
+      physics.leftLiftVel = physics.leftLiftVel * 0.7 + leftLiftVel * 0.3;
+      physics.rightLiftVel = physics.rightLiftVel * 0.7 + rightLiftVel * 0.3;
       
-      // Calculate center position between eyebrows
+      physics.prevLeftY = leftBrowY;
+      physics.prevRightY = rightBrowY;
+
+      // Calculate the tilt based on height difference between brows
+      const browHeightDiff = (rightBrowY - leftBrowY) * canvas.height;
+      const targetTilt = browHeightDiff * 0.05; // Convert to rotation
+
+      // Calculate average brow height for vertical bounce
+      const avgBrowLift = (physics.leftLiftVel + physics.rightLiftVel) / 2;
+      
+      // Detect fast movements for wild spinning
+      const combinedVelocity = Math.abs(physics.leftLiftVel) + Math.abs(physics.rightLiftVel);
+      const velocityThreshold = 2; // Threshold for "fast" movement
+      
+      if (combinedVelocity > velocityThreshold) {
+        physics.spinAccumulator += combinedVelocity * dt * 5;
+        if (physics.spinAccumulator > 3) {
+          physics.isSpinning = true;
+        }
+      } else {
+        physics.spinAccumulator *= 0.9; // Decay
+      }
+
+      // Physics simulation
+      if (physics.isSpinning) {
+        // Wild spinning mode!
+        const spinDirection = physics.leftLiftVel > physics.rightLiftVel ? 1 : -1;
+        physics.rotationVel += spinDirection * combinedVelocity * dt * 15;
+        physics.rotationVel *= 0.95; // Friction
+        physics.rotation += physics.rotationVel * dt;
+        
+        // Extra wobble during spin
+        physics.wobble = Math.sin(now * 0.02) * 0.3;
+        
+        // Stop spinning when rotation velocity dies down
+        if (Math.abs(physics.rotationVel) < 0.5 && combinedVelocity < velocityThreshold * 0.5) {
+          physics.isSpinning = false;
+          physics.spinAccumulator = 0;
+        }
+      } else {
+        // Normal balancing mode
+        // Spring physics for rotation
+        const rotationSpring = 8;
+        const rotationDamping = 0.85;
+        
+        physics.rotationVel += (targetTilt - physics.rotation) * rotationSpring * dt;
+        physics.rotationVel *= rotationDamping;
+        physics.rotation += physics.rotationVel;
+        
+        // Add wobble from fast brow movements
+        physics.wobble = Math.sin(now * 0.015) * Math.min(0.2, combinedVelocity * 0.05);
+      }
+
+      // Vertical bounce physics
+      const bounceForce = avgBrowLift * 500; // Convert lift velocity to bounce
+      physics.yVel += bounceForce * dt;
+      physics.yVel += (-physics.yOffset * 15) * dt; // Spring back
+      physics.yVel *= 0.88; // Damping
+      physics.yOffset += physics.yVel * dt;
+      physics.yOffset = Math.max(-50, Math.min(30, physics.yOffset)); // Clamp
+
+      // Calculate position between eyebrows
+      // Use MediaPipe indices correctly for mirrored video
       const centerX = ((leftBrowCenter.x + rightBrowCenter.x) / 2) * canvas.width;
       const centerY = ((leftBrowCenter.y + rightBrowCenter.y) / 2) * canvas.height;
-      
-      // Calculate the distance between eyebrows to scale the piece appropriately
+
+      // Calculate block size based on face
       const browDistance = Math.abs(rightBrowCenter.x - leftBrowCenter.x) * canvas.width;
-      const cellSize = Math.max(8, Math.min(20, browDistance / 6));
+      const cellSize = Math.max(12, Math.min(24, browDistance / 5));
+
+      // Get the next piece shape and color
+      const shape = nextPiece.shape;
+      const color = TETRIS_COLORS[nextPiece.color];
+
+      const blockWidth = shape[0].length * cellSize;
+      const blockHeight = shape.length * cellSize;
+
+      // Position above brows with physics offset
+      const posY = centerY - blockHeight - cellSize * 1.5 + physics.yOffset;
+
+      ctx.save();
+      ctx.translate(centerX, posY);
       
-      // Offset upward so piece hovers above the eyebrows
-      const offsetY = -cellSize * 2;
+      // Apply rotation with wobble
+      const totalRotation = physics.rotation + physics.wobble;
+      ctx.rotate(totalRotation);
+
+      // Scale effect when spinning fast
+      const spinScale = physics.isSpinning ? 1 + Math.abs(physics.rotationVel) * 0.02 : 1;
+      ctx.scale(spinScale, spinScale);
+
+      // Draw the Tetris piece
+      ctx.globalAlpha = physics.isSpinning ? 0.85 : 0.95;
       
-      const pieceWidth = piece.shape[0].length * cellSize;
-      const pieceHeight = piece.shape.length * cellSize;
-      const startX = centerX - pieceWidth / 2;
-      const startY = centerY + offsetY - pieceHeight / 2;
-      
-      // Draw with semi-transparency (ghost effect)
-      ctx.globalAlpha = 0.6;
-      
-      piece.shape.forEach((row, dy) => {
-        row.forEach((cell, dx) => {
+      shape.forEach((row, rowIdx) => {
+        row.forEach((cell, colIdx) => {
           if (cell) {
-            const x = startX + dx * cellSize;
-            const y = startY + dy * cellSize;
-            
-            // Fill with piece color
-            ctx.fillStyle = TETRIS_COLORS[piece.color];
-            ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
-            
-            // Add border for definition
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x, y, cellSize - 1, cellSize - 1);
+            const bx = colIdx * cellSize - blockWidth / 2;
+            const by = rowIdx * cellSize - blockHeight / 2;
+
+            // Main block color
+            ctx.fillStyle = color;
+            ctx.fillRect(bx, by, cellSize - 2, cellSize - 2);
+
+            // Highlight (top-left edges)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.fillRect(bx, by, cellSize - 2, 3);
+            ctx.fillRect(bx, by, 3, cellSize - 2);
+
+            // Shadow (bottom-right edges)
+            ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+            ctx.fillRect(bx, by + cellSize - 5, cellSize - 2, 3);
+            ctx.fillRect(bx + cellSize - 5, by, 3, cellSize - 2);
           }
         });
       });
-      
-      ctx.globalAlpha = 1;
-    };
 
-    // Get current piece from tetris and draw ghost
-    const currentPiece = tetrisRef.current?.getCurrentPiece?.();
-    if (currentPiece) {
-      drawGhostPiece(currentPiece);
+      // Draw spin effect lines when spinning wildly
+      if (physics.isSpinning && Math.abs(physics.rotationVel) > 2) {
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        const spinLines = 6;
+        for (let i = 0; i < spinLines; i++) {
+          const angle = (i / spinLines) * Math.PI * 2 + physics.rotation * 2;
+          const innerR = Math.max(blockWidth, blockHeight) * 0.3;
+          const outerR = Math.max(blockWidth, blockHeight) * 0.7;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
+          ctx.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+
+      // Draw "WHOA!" text when spinning really fast
+      if (physics.isSpinning && Math.abs(physics.rotationVel) > 5) {
+        ctx.save();
+        ctx.font = `bold ${cellSize}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffeb3b";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3;
+        const wobbleX = Math.sin(now * 0.03) * 10;
+        ctx.strokeText("WHOA!", centerX + wobbleX, posY - cellSize);
+        ctx.fillText("WHOA!", centerX + wobbleX, posY - cellSize);
+        ctx.restore();
+      }
     }
-  }, [faceLandmarks, mouthOpen, leftBrowRaised, rightBrowRaised]);
+
+    // Draw anime sweat drops when stack is high
+    if (stackDanger.isInDanger) {
+      const dangerInfo = stackDanger;
+      const drawSweatDrop = (
+        x: number,
+        y: number,
+        size: number,
+        animOffset: number,
+      ) => {
+        // Animate the drop falling
+        const time = Date.now() / 1000;
+        const cycle = ((time + animOffset) % 1.2) / 1.2; // 1.2 second cycle
+
+        // Drop appears, falls, then fades
+        let opacity = 1;
+        let offsetY = 0;
+        let scale = 1;
+
+        if (cycle < 0.15) {
+          // Appear phase
+          opacity = cycle / 0.15;
+          scale = 0.8 + 0.2 * (cycle / 0.15);
+        } else if (cycle < 0.7) {
+          // Fall phase
+          offsetY = ((cycle - 0.15) / 0.55) * size * 1.5;
+          opacity = 1;
+          scale = 1;
+        } else {
+          // Fade phase
+          const fadeProgress = (cycle - 0.7) / 0.3;
+          offsetY = size * 1.5 + fadeProgress * size * 0.5;
+          opacity = 1 - fadeProgress;
+          scale = 1 - fadeProgress * 0.4;
+        }
+
+        ctx.save();
+        ctx.translate(x, y + offsetY);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = opacity * (0.7 + dangerInfo.dangerLevel * 0.3);
+
+        // Create gradient for the drop
+        const gradient = ctx.createLinearGradient(
+          -size / 2,
+          -size,
+          size / 2,
+          size,
+        );
+        gradient.addColorStop(0, "#93c5fd");
+        gradient.addColorStop(0.5, "#3b82f6");
+        gradient.addColorStop(1, "#1d4ed8");
+
+        // Draw teardrop shape
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.bezierCurveTo(
+          size * 0.6,
+          -size * 0.3,
+          size * 0.6,
+          size * 0.5,
+          0,
+          size,
+        );
+        ctx.bezierCurveTo(
+          -size * 0.6,
+          size * 0.5,
+          -size * 0.6,
+          -size * 0.3,
+          0,
+          -size,
+        );
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Highlight
+        ctx.beginPath();
+        ctx.ellipse(
+          -size * 0.15,
+          -size * 0.2,
+          size * 0.2,
+          size * 0.15,
+          -0.3,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      // Get face landmarks for sweat drop placement all over the face
+      const forehead = faceLandmarks[FOREHEAD_IDX];
+      const noseTip = faceLandmarks[NOSE_TIP_IDX];
+      const leftTemple = faceLandmarks[234];
+      const rightTemple = faceLandmarks[454];
+      const leftCheek = faceLandmarks[116];
+      const rightCheek = faceLandmarks[345];
+      const leftJaw = faceLandmarks[132];
+      const rightJaw = faceLandmarks[361];
+      const chin = faceLandmarks[152];
+      const leftBrowOuter = faceLandmarks[70];
+      const rightBrowOuter = faceLandmarks[300];
+
+      if (forehead && noseTip && leftTemple && rightTemple) {
+        const faceHeight = Math.abs(noseTip.y - forehead.y) * canvas.height;
+        const faceWidth = Math.abs(rightTemple.x - leftTemple.x) * canvas.width;
+        const baseDropSize = faceHeight * 0.08;
+
+        // Define sweat drop positions across the face
+        // Each entry: [landmark, offsetX ratio, offsetY ratio, size multiplier, anim offset]
+        type SweatConfig = [
+          typeof forehead | undefined,
+          number,
+          number,
+          number,
+          number,
+        ];
+
+        const sweatPositions: SweatConfig[] = [
+          // Forehead drops
+          [forehead, -0.15, 0.05, 1.0, 0],
+          [forehead, 0.15, 0.08, 0.85, 0.3],
+          [forehead, 0, 0.12, 0.7, 0.6],
+
+          // Temple/side of head drops (classic anime position)
+          [leftTemple, -0.02, -0.05, 1.2, 0.1],
+          [rightTemple, 0.02, -0.05, 1.2, 0.5],
+
+          // Near eyebrows
+          [leftBrowOuter, -0.03, -0.02, 0.8, 0.2],
+          [rightBrowOuter, 0.03, -0.02, 0.8, 0.7],
+
+          // Cheek drops
+          [leftCheek, -0.02, 0.02, 0.9, 0.35],
+          [rightCheek, 0.02, 0.02, 0.9, 0.85],
+        ];
+
+        // Add more drops based on danger level
+        if (dangerInfo.dangerLevel > 0.2) {
+          sweatPositions.push(
+            [leftTemple, -0.04, 0.08, 0.7, 0.15],
+            [rightTemple, 0.04, 0.08, 0.7, 0.65],
+            [forehead, -0.25, 0.1, 0.6, 0.4],
+            [forehead, 0.25, 0.1, 0.6, 0.9],
+          );
+        }
+
+        if (dangerInfo.dangerLevel > 0.4) {
+          sweatPositions.push(
+            [leftJaw, -0.01, 0, 0.75, 0.25],
+            [rightJaw, 0.01, 0, 0.75, 0.75],
+            [leftCheek, -0.05, 0.06, 0.6, 0.45],
+            [rightCheek, 0.05, 0.06, 0.6, 0.95],
+            [forehead, -0.08, 0.02, 0.55, 0.55],
+          );
+        }
+
+        if (dangerInfo.dangerLevel > 0.6) {
+          sweatPositions.push(
+            [chin, -0.05, -0.02, 0.65, 0.32],
+            [chin, 0.05, -0.02, 0.65, 0.82],
+            [leftJaw, -0.03, 0.05, 0.5, 0.42],
+            [rightJaw, 0.03, 0.05, 0.5, 0.92],
+            [leftBrowOuter, -0.06, 0.03, 0.55, 0.52],
+            [rightBrowOuter, 0.06, 0.03, 0.55, 0.02],
+            [forehead, 0.08, 0.02, 0.5, 0.62],
+          );
+        }
+
+        if (dangerInfo.dangerLevel > 0.8) {
+          sweatPositions.push(
+            [leftTemple, -0.06, 0.15, 0.5, 0.12],
+            [rightTemple, 0.06, 0.15, 0.5, 0.62],
+            [leftCheek, -0.08, 0.1, 0.45, 0.22],
+            [rightCheek, 0.08, 0.1, 0.45, 0.72],
+            [chin, 0, 0.02, 0.5, 0.37],
+            [forehead, -0.2, 0.15, 0.4, 0.47],
+            [forehead, 0.2, 0.15, 0.4, 0.97],
+          );
+        }
+
+        // Draw all sweat drops
+        for (const [
+          landmark,
+          offsetXRatio,
+          offsetYRatio,
+          sizeMult,
+          animOffset,
+        ] of sweatPositions) {
+          if (landmark) {
+            const x = landmark.x * canvas.width + offsetXRatio * faceWidth;
+            const y = landmark.y * canvas.height + offsetYRatio * faceHeight;
+            const size = baseDropSize * sizeMult;
+            drawSweatDrop(x, y, size, animOffset);
+          }
+        }
+      }
+    }
+
+    // Draw hard drop reaction bubble from mouth
+    if (hardDropReaction?.active && faceLandmarks) {
+      const mouthCenter = faceLandmarks[13]; // Upper lip center
+      const mouthLeft = faceLandmarks[61];
+      const mouthRight = faceLandmarks[291];
+
+      if (mouthCenter && mouthLeft && mouthRight) {
+        const mouthX = mouthCenter.x * canvas.width;
+        const mouthY = mouthCenter.y * canvas.height;
+        const mouthWidth = Math.abs(mouthRight.x - mouthLeft.x) * canvas.width;
+
+        // Calculate animation progress (0 to 1)
+        const elapsed = Date.now() - hardDropReaction.startTime;
+        const progress = Math.min(elapsed / 600, 1);
+
+        // Bubble grows quickly then shrinks
+        const scaleProgress =
+          progress < 0.3
+            ? progress / 0.3 // Grow phase
+            : 1 - ((progress - 0.3) / 0.7) * 0.3; // Slight shrink phase
+
+        // Opacity fades out at the end
+        const opacity = progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1;
+
+        // Random offset direction (seeded by word)
+        const wordSeed = hardDropReaction.word.charCodeAt(0);
+        const offsetAngle = ((wordSeed % 6) - 3) * 0.2; // Smaller angle variation
+        const bubbleDistance =
+          mouthWidth * 1.2 + mouthWidth * scaleProgress * 0.5;
+
+        // Position bubble coming out of mouth, going DOWN and slightly to the side
+        const bubbleX = mouthX + Math.sin(offsetAngle) * bubbleDistance;
+        const bubbleY =
+          mouthY + Math.cos(offsetAngle) * bubbleDistance + mouthWidth * 0.5;
+
+        // Size based on mouth width (smaller)
+        const bubbleSize = mouthWidth * (0.9 + scaleProgress * 0.3);
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
+
+        // Flip horizontally to counter the canvas mirror transform
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+
+        // Recalculate positions for flipped context
+        const flippedMouthX = canvas.width - mouthX;
+        const flippedBubbleX = canvas.width - bubbleX;
+
+        // Draw speech bubble tail (triangle pointing up to mouth)
+        ctx.beginPath();
+        ctx.moveTo(flippedMouthX, mouthY + mouthWidth * 0.2);
+        ctx.lineTo(
+          flippedBubbleX - bubbleSize * 0.15,
+          bubbleY - bubbleSize * 0.25,
+        );
+        ctx.lineTo(
+          flippedBubbleX + bubbleSize * 0.08,
+          bubbleY - bubbleSize * 0.28,
+        );
+        ctx.closePath();
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw spiky burst bubble
+        const spikes = 10;
+        const innerRadius = bubbleSize * 0.7;
+        const outerRadius = bubbleSize;
+
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+          const angle = (i * Math.PI) / spikes - Math.PI / 2;
+          const radius = i % 2 === 0 ? outerRadius : innerRadius;
+          const x = flippedBubbleX + Math.cos(angle) * radius;
+          const y = bubbleY + Math.sin(angle) * radius;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+
+        // Yellow fill with white inner
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fill();
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Inner white burst
+        ctx.beginPath();
+        const innerBurstRadius = bubbleSize * 0.55;
+        const innerBurstInner = bubbleSize * 0.4;
+        for (let i = 0; i < spikes * 2; i++) {
+          const angle = (i * Math.PI) / spikes - Math.PI / 2;
+          const radius = i % 2 === 0 ? innerBurstRadius : innerBurstInner;
+          const x = flippedBubbleX + Math.cos(angle) * radius;
+          const y = bubbleY + Math.sin(angle) * radius;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+
+        // Draw text (smaller)
+        const fontSize = Math.max(10, bubbleSize * 0.32);
+        ctx.font = `900 ${fontSize}px "Comic Sans MS", "Chalkboard SE", cursive`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // Text shadow for comic effect
+        ctx.fillStyle = "#ff0066";
+        ctx.fillText(hardDropReaction.word, flippedBubbleX + 1, bubbleY + 1);
+        ctx.fillStyle = "#00ffff";
+        ctx.fillText(hardDropReaction.word, flippedBubbleX - 1, bubbleY - 1);
+        ctx.fillStyle = "#000000";
+        ctx.fillText(hardDropReaction.word, flippedBubbleX, bubbleY);
+
+        ctx.restore();
+      }
+    }
+
+    // Draw googly eyes if enabled
+    if (showGooglyEyes) {
+      const drawGooglyEye = (
+        centerX: number,
+        centerY: number,
+        eyeWidth: number,
+        eyeHeight: number,
+        pupilOffsetX: number,
+        pupilOffsetY: number,
+      ) => {
+        const radius = Math.max(eyeWidth, eyeHeight) * 0.75;
+
+        // White of the eye (sclera)
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#333333";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Pupil - follows the iris position with some physics-like delay
+        const pupilRadius = radius * 0.45;
+        const maxPupilOffset = radius - pupilRadius - 4;
+
+        // Clamp pupil position to stay inside the eye
+        const offsetMagnitude = Math.sqrt(
+          pupilOffsetX * pupilOffsetX + pupilOffsetY * pupilOffsetY,
+        );
+        let clampedOffsetX = pupilOffsetX;
+        let clampedOffsetY = pupilOffsetY;
+        if (offsetMagnitude > maxPupilOffset) {
+          const scale = maxPupilOffset / offsetMagnitude;
+          clampedOffsetX *= scale;
+          clampedOffsetY *= scale;
+        }
+
+        const pupilX = centerX + clampedOffsetX;
+        const pupilY = centerY + clampedOffsetY;
+
+        // Black pupil
+        ctx.beginPath();
+        ctx.arc(pupilX, pupilY, pupilRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = "#000000";
+        ctx.fill();
+
+        // Highlight reflection
+        ctx.beginPath();
+        ctx.arc(
+          pupilX - pupilRadius * 0.3,
+          pupilY - pupilRadius * 0.3,
+          pupilRadius * 0.25,
+          0,
+          2 * Math.PI,
+        );
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+      };
+
+      // Get eye positions from landmarks
+      const leftEyeTop = faceLandmarks[LEFT_EYE_TOP_IDX];
+      const leftEyeBottom = faceLandmarks[LEFT_EYE_BOTTOM_IDX];
+      const leftEyeInner = faceLandmarks[LEFT_EYE_INNER_IDX];
+      const leftEyeOuter = faceLandmarks[LEFT_EYE_OUTER_IDX_ALT];
+
+      const rightEyeTop = faceLandmarks[RIGHT_EYE_TOP_IDX];
+      const rightEyeBottom = faceLandmarks[RIGHT_EYE_BOTTOM_IDX];
+      const rightEyeInner = faceLandmarks[RIGHT_EYE_INNER_IDX];
+      const rightEyeOuter = faceLandmarks[RIGHT_EYE_OUTER_IDX_ALT];
+
+      if (
+        leftEyeTop &&
+        leftEyeBottom &&
+        leftEyeInner &&
+        leftEyeOuter &&
+        rightEyeTop &&
+        rightEyeBottom &&
+        rightEyeInner &&
+        rightEyeOuter
+      ) {
+        // Calculate eye centers
+        const leftCenterX =
+          ((leftEyeInner.x + leftEyeOuter.x) / 2) * canvas.width;
+        const leftCenterY =
+          ((leftEyeTop.y + leftEyeBottom.y) / 2) * canvas.height;
+        const leftWidth =
+          Math.abs(leftEyeOuter.x - leftEyeInner.x) * canvas.width;
+        const leftHeight =
+          Math.abs(leftEyeBottom.y - leftEyeTop.y) * canvas.height;
+
+        const rightCenterX =
+          ((rightEyeInner.x + rightEyeOuter.x) / 2) * canvas.width;
+        const rightCenterY =
+          ((rightEyeTop.y + rightEyeBottom.y) / 2) * canvas.height;
+        const rightWidth =
+          Math.abs(rightEyeOuter.x - rightEyeInner.x) * canvas.width;
+        const rightHeight =
+          Math.abs(rightEyeBottom.y - rightEyeTop.y) * canvas.height;
+
+        // Track face position for movement-based physics
+        // Use the center between the eyes as the face position
+        const faceCenterX = (leftCenterX + rightCenterX) / 2;
+        const faceCenterY = (leftCenterY + rightCenterY) / 2;
+
+        // Calculate face velocity (how fast the face is moving)
+        const faceVelX = faceCenterX - facePosRef.current.lastX;
+        const faceVelY = faceCenterY - facePosRef.current.lastY;
+        facePosRef.current.lastX = faceCenterX;
+        facePosRef.current.lastY = faceCenterY;
+
+        // Smooth face velocity to avoid jitter
+        facePosRef.current.x += (faceVelX - facePosRef.current.x) * 0.5;
+        facePosRef.current.y += (faceVelY - facePosRef.current.y) * 0.5;
+
+        // Calculate face rotation from landmarks for gravity direction
+        // Use nose and forehead to estimate pitch (up/down tilt)
+        const noseTip = faceLandmarks[NOSE_TIP_IDX];
+        const forehead = faceLandmarks[FOREHEAD_IDX];
+        // Use left and right eye corners to estimate yaw (left/right turn)
+        const leftEyeCorner = faceLandmarks[LEFT_EYE_OUTER_IDX];
+        const rightEyeCorner = faceLandmarks[RIGHT_EYE_OUTER_IDX];
+
+        if (noseTip && forehead && leftEyeCorner && rightEyeCorner) {
+          // Pitch: positive = looking down, negative = looking up
+          const pitch = (noseTip.z - forehead.z) * 5;
+
+          // Yaw: positive = turned right, negative = turned left
+          const yaw = (rightEyeCorner.z - leftEyeCorner.z) * 5;
+
+          // Smooth the rotation values
+          faceRotationRef.current.pitch +=
+            (pitch - faceRotationRef.current.pitch) * 0.3;
+          faceRotationRef.current.yaw +=
+            (yaw - faceRotationRef.current.yaw) * 0.3;
+        }
+
+        // Physics constants
+        const gravity = 400; // pixels per second squared (reduced for more movement effect)
+        const friction = 0.94; // velocity damping
+        const bounciness = 0.5; // energy retained on bounce
+        const inertiaStrength = 15; // how much face movement affects pupils
+        const eyeRadius = Math.max(leftWidth, leftHeight) * 0.75;
+        const pupilRadius = eyeRadius * 0.45;
+        const maxOffset = eyeRadius - pupilRadius - 2;
+
+        // Calculate time delta
+        const now = Date.now();
+        const dt = Math.min(
+          (now - googlyPupilRef.current.lastTime) / 1000,
+          0.05,
+        );
+        googlyPupilRef.current.lastTime = now;
+
+        // Gravity direction based on face tilt
+        const gravityX = -faceRotationRef.current.yaw * gravity * 0.5;
+        const gravityY = gravity * (1 + faceRotationRef.current.pitch * 0.5);
+
+        // Inertia force: when face moves, pupils lag behind (opposite direction)
+        // This creates the "sloshing" effect of real googly eyes
+        const inertiaX = -facePosRef.current.x * inertiaStrength;
+        const inertiaY = -facePosRef.current.y * inertiaStrength;
+
+        // Combined forces: gravity + inertia from face movement
+        const totalForceX = gravityX + inertiaX;
+        const totalForceY = gravityY + inertiaY;
+
+        // Update velocities with combined forces
+        googlyPupilRef.current.leftVelX += totalForceX * dt;
+        googlyPupilRef.current.leftVelY += totalForceY * dt;
+        googlyPupilRef.current.rightVelX += totalForceX * dt;
+        googlyPupilRef.current.rightVelY += totalForceY * dt;
+
+        // Apply friction
+        googlyPupilRef.current.leftVelX *= friction;
+        googlyPupilRef.current.leftVelY *= friction;
+        googlyPupilRef.current.rightVelX *= friction;
+        googlyPupilRef.current.rightVelY *= friction;
+
+        // Update positions
+        googlyPupilRef.current.leftX += googlyPupilRef.current.leftVelX * dt;
+        googlyPupilRef.current.leftY += googlyPupilRef.current.leftVelY * dt;
+        googlyPupilRef.current.rightX += googlyPupilRef.current.rightVelX * dt;
+        googlyPupilRef.current.rightY += googlyPupilRef.current.rightVelY * dt;
+
+        // Bounce off the eye boundary (circular constraint)
+        const constrainPupil = (
+          x: number,
+          y: number,
+          velX: number,
+          velY: number,
+        ): { x: number; y: number; velX: number; velY: number } => {
+          const dist = Math.sqrt(x * x + y * y);
+          if (dist > maxOffset) {
+            // Normalize and push back inside
+            const nx = x / dist;
+            const ny = y / dist;
+            x = nx * maxOffset;
+            y = ny * maxOffset;
+
+            // Reflect velocity off the circular boundary
+            const dotProduct = velX * nx + velY * ny;
+            velX = (velX - 2 * dotProduct * nx) * bounciness;
+            velY = (velY - 2 * dotProduct * ny) * bounciness;
+
+            // Add some randomness for that chaotic googly feel
+            velX += (Math.random() - 0.5) * 50;
+            velY += (Math.random() - 0.5) * 50;
+          }
+          return { x, y, velX, velY };
+        };
+
+        const leftConstrained = constrainPupil(
+          googlyPupilRef.current.leftX,
+          googlyPupilRef.current.leftY,
+          googlyPupilRef.current.leftVelX,
+          googlyPupilRef.current.leftVelY,
+        );
+        googlyPupilRef.current.leftX = leftConstrained.x;
+        googlyPupilRef.current.leftY = leftConstrained.y;
+        googlyPupilRef.current.leftVelX = leftConstrained.velX;
+        googlyPupilRef.current.leftVelY = leftConstrained.velY;
+
+        const rightConstrained = constrainPupil(
+          googlyPupilRef.current.rightX,
+          googlyPupilRef.current.rightY,
+          googlyPupilRef.current.rightVelX,
+          googlyPupilRef.current.rightVelY,
+        );
+        googlyPupilRef.current.rightX = rightConstrained.x;
+        googlyPupilRef.current.rightY = rightConstrained.y;
+        googlyPupilRef.current.rightVelX = rightConstrained.velX;
+        googlyPupilRef.current.rightVelY = rightConstrained.velY;
+
+        // Draw the googly eyes
+        drawGooglyEye(
+          leftCenterX,
+          leftCenterY,
+          leftWidth,
+          leftHeight,
+          googlyPupilRef.current.leftX,
+          googlyPupilRef.current.leftY,
+        );
+
+        drawGooglyEye(
+          rightCenterX,
+          rightCenterY,
+          rightWidth,
+          rightHeight,
+          googlyPupilRef.current.rightX,
+          googlyPupilRef.current.rightY,
+        );
+      }
+    }
+  }, [
+    faceLandmarks,
+    mouthOpen,
+    leftBrowRaised,
+    rightBrowRaised,
+    showGooglyEyes,
+    showLandmarks,
+    stackDanger,
+    hardDropReaction,
+  ]);
 
   useEffect(() => {
     drawFaceOverlay();
   }, [drawFaceOverlay]);
+
+  // Poll the danger level from the Tetris game
+  useEffect(() => {
+    if (status !== "ready") return;
+
+    const checkDanger = () => {
+      const danger = tetrisRef.current?.getDangerLevel?.();
+      if (danger) {
+        setStackDanger((prev) => {
+          if (
+            prev.isInDanger !== danger.isInDanger ||
+            Math.abs(prev.dangerLevel - danger.dangerLevel) > 0.05
+          ) {
+            return danger;
+          }
+          return prev;
+        });
+      }
+    };
+
+    const intervalId = setInterval(checkDanger, 100);
+    return () => clearInterval(intervalId);
+  }, [status]);
 
   const handleExit = useCallback(() => {
     stopEverything();
@@ -314,7 +1152,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       console.warn("GameScreen: refs not ready, retrying...");
       return;
     }
-    
+
     // Prevent multiple simultaneous starts
     if (isStartingRef.current || streamRef.current) {
       return;
@@ -342,7 +1180,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       installMediaPipeLogFilter();
 
       const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
       );
 
       const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
@@ -377,7 +1215,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           const now = performance.now();
           lastVideoTimeRef.current = video.currentTime;
 
-          if (now - lastFaceDetectionAtRef.current >= FACE_DETECTION_INTERVAL_MS) {
+          if (
+            now - lastFaceDetectionAtRef.current >=
+            FACE_DETECTION_INTERVAL_MS
+          ) {
             lastFaceDetectionAtRef.current = now;
 
             try {
@@ -399,11 +1240,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 if (upperLip && lowerLip && leftCorner && rightCorner) {
                   const openDist = Math.hypot(
                     upperLip.x - lowerLip.x,
-                    upperLip.y - lowerLip.y
+                    upperLip.y - lowerLip.y,
                   );
                   const mouthWidth = Math.hypot(
                     leftCorner.x - rightCorner.x,
-                    leftCorner.y - rightCorner.y
+                    leftCorner.y - rightCorner.y,
                   );
                   ratio = openDist / Math.max(mouthWidth, 0.001);
                   setMouthOpen(ratio > MOUTH_OPEN_THRESHOLD);
@@ -411,15 +1252,15 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
                 const browOuterUpLeft = getBlendshapeScore(
                   faceBlendshapes,
-                  "browOuterUpLeft"
+                  "browOuterUpLeft",
                 );
                 const browOuterUpRight = getBlendshapeScore(
                   faceBlendshapes,
-                  "browOuterUpRight"
+                  "browOuterUpRight",
                 );
                 const browInnerUp = getBlendshapeScore(
                   faceBlendshapes,
-                  "browInnerUp"
+                  "browInnerUp",
                 );
 
                 setBlendshapeScores({
@@ -442,19 +1283,26 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 let leftBrowLift = 0;
                 let rightBrowLift = 0;
 
-                if (leftOuterBrow && rightOuterBrow && leftEyeOuter && rightEyeOuter && noseTip && forehead) {
+                if (
+                  leftOuterBrow &&
+                  rightOuterBrow &&
+                  leftEyeOuter &&
+                  rightEyeOuter &&
+                  noseTip &&
+                  forehead
+                ) {
                   // Calculate face height for normalization
                   const faceHeight = Math.abs(noseTip.y - forehead.y);
-                  
+
                   // Calculate brow-to-eye distance (lower Y = higher on screen = raised brow)
                   // Negative values mean brow is above eye corner
                   const leftBrowToEye = leftOuterBrow.y - leftEyeOuter.y;
                   const rightBrowToEye = rightOuterBrow.y - rightEyeOuter.y;
-                  
+
                   // Normalize by face height
                   const leftBrowRatio = leftBrowToEye / faceHeight;
                   const rightBrowRatio = rightBrowToEye / faceHeight;
-                  
+
                   // Establish baseline during first 30 frames (about 1.5 seconds)
                   if (baselineFrameCountRef.current < 30) {
                     baselineFrameCountRef.current++;
@@ -463,40 +1311,45 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                       rightBrowBaselineRef.current = rightBrowRatio;
                     } else {
                       // Running average for baseline
-                      leftBrowBaselineRef.current = leftBrowBaselineRef.current * 0.9 + leftBrowRatio * 0.1;
-                      rightBrowBaselineRef.current = rightBrowBaselineRef.current! * 0.9 + rightBrowRatio * 0.1;
+                      leftBrowBaselineRef.current =
+                        leftBrowBaselineRef.current * 0.9 + leftBrowRatio * 0.1;
+                      rightBrowBaselineRef.current =
+                        rightBrowBaselineRef.current! * 0.9 +
+                        rightBrowRatio * 0.1;
                     }
                   }
-                  
+
                   // Calculate lift from baseline (negative = raised)
-                  const leftBaseline = leftBrowBaselineRef.current ?? leftBrowRatio;
-                  const rightBaseline = rightBrowBaselineRef.current ?? rightBrowRatio;
-                  
-                  leftBrowLift = leftBaseline - leftBrowRatio;  // Positive when raised
-                  rightBrowLift = rightBaseline - rightBrowRatio;  // Positive when raised
-                  
+                  const leftBaseline =
+                    leftBrowBaselineRef.current ?? leftBrowRatio;
+                  const rightBaseline =
+                    rightBrowBaselineRef.current ?? rightBrowRatio;
+
+                  leftBrowLift = leftBaseline - leftBrowRatio; // Positive when raised
+                  rightBrowLift = rightBaseline - rightBrowRatio; // Positive when raised
+
                   // Swap left/right because video is mirrored
                   // MediaPipe's "left" landmarks appear on the RIGHT side of the mirrored video (user's right)
                   // So leftBrowLift from MediaPipe = user's RIGHT brow
                   setLandmarkScores({
-                    leftBrowLift: rightBrowLift,   // User's left = MediaPipe's right
-                    rightBrowLift: leftBrowLift,   // User's right = MediaPipe's left
+                    leftBrowLift: rightBrowLift, // User's left = MediaPipe's right
+                    rightBrowLift: leftBrowLift, // User's right = MediaPipe's left
                     leftBrowBaseline: rightBrowBaselineRef.current,
                     rightBrowBaseline: leftBrowBaselineRef.current,
                   });
-                  
+
                   // Detect raised brows using landmark-based measurement with hysteresis (swapped for mirror)
                   // User's left = MediaPipe's right, User's right = MediaPipe's left
                   // Hysteresis: use higher threshold to trigger, lower threshold to release
                   const wasLeftRaised = prevLeftBrowRef.current;
                   const wasRightRaised = prevRightBrowRef.current;
-                  
-                  leftBrow = wasLeftRaised 
-                    ? rightBrowLift > BROW_LOWER_THRESHOLD   // Already raised: stay raised until below lower threshold
-                    : rightBrowLift > BROW_LIFT_THRESHOLD;   // Not raised: need to exceed higher threshold
+
+                  leftBrow = wasLeftRaised
+                    ? rightBrowLift > BROW_LOWER_THRESHOLD // Already raised: stay raised until below lower threshold
+                    : rightBrowLift > BROW_LIFT_THRESHOLD; // Not raised: need to exceed higher threshold
                   rightBrow = wasRightRaised
-                    ? leftBrowLift > BROW_LOWER_THRESHOLD    // Already raised: stay raised until below lower threshold
-                    : leftBrowLift > BROW_LIFT_THRESHOLD;    // Not raised: need to exceed higher threshold
+                    ? leftBrowLift > BROW_LOWER_THRESHOLD // Already raised: stay raised until below lower threshold
+                    : leftBrowLift > BROW_LIFT_THRESHOLD; // Not raised: need to exceed higher threshold
                 }
 
                 setLeftBrowRaised(leftBrow);
@@ -516,7 +1369,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                   // Both brows raised = rotate (only trigger once on transition)
                   const bothBrowsNow = leftBrow && rightBrow;
                   const bothBrowsPrev = prevLeft && prevRight;
-                  
+
                   if (bothBrowsNow && !bothBrowsPrev) {
                     // Both brows just raised together - rotate
                     tetris.rotate();
@@ -527,9 +1380,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                     // Only right brow raised (and left is not raised) - move right
                     tetris.moveRight();
                   }
-                  
+
                   if (mouthOpenNow && !prevMouth) {
                     tetris.hardDrop();
+                    triggerHardDropReaction();
                   }
                 }
               } else {
@@ -577,31 +1431,33 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     const maxRetries = 10;
     let retryTimeout: ReturnType<typeof setTimeout> | null = null;
     let isActive = true;
-    
+
     const attemptStart = () => {
       if (!isActive) return;
-      
+
       // Check if refs are ready
       if (!videoRef.current || !containerRef.current) {
         retryCount++;
         if (retryCount < maxRetries) {
           retryTimeout = setTimeout(attemptStart, 50);
         } else {
-          console.error("GameScreen: Failed to initialize - refs not available");
+          console.error(
+            "GameScreen: Failed to initialize - refs not available",
+          );
           setErrorMessage("Failed to initialize game screen");
           setStatus("error");
         }
         return;
       }
-      
+
       // Only start if we haven't already started (check if stream exists)
       if (!streamRef.current) {
         handleStart();
       }
     };
-    
+
     attemptStart();
-    
+
     return () => {
       isActive = false;
       if (retryTimeout) clearTimeout(retryTimeout);
@@ -617,11 +1473,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--background)] md:flex-row ${
+      className={`fixed inset-0 z-50 flex flex-row overflow-hidden bg-[var(--background)] ${
         lineClearFlash.active ? "animate-screen-shake-intense" : ""
       }`}
     >
-      <div className="relative flex min-h-[40vh] min-w-0 flex-1 md:min-h-0">
+      <div className="relative flex min-h-0 min-w-0 flex-1">
         <video
           ref={videoRef}
           playsInline
@@ -639,131 +1495,36 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           }}
         />
         {lineClearFlash.active && (
-          <div
-            className="pointer-events-none absolute inset-0 animate-pulse"
-            style={{
-              background: `linear-gradient(45deg, 
-                rgba(0, 255, 255, ${0.15 * lineClearFlash.intensity}) 0%, 
-                rgba(255, 0, 255, ${0.15 * lineClearFlash.intensity}) 50%, 
-                rgba(255, 255, 0, ${0.15 * lineClearFlash.intensity}) 100%)`,
-              mixBlendMode: "screen",
-            }}
-          />
+          <>
+            <div
+              className="pointer-events-none absolute inset-0 animate-pulse"
+              style={{
+                background: `linear-gradient(45deg, 
+                  rgba(0, 255, 255, ${0.15 * lineClearFlash.intensity}) 0%, 
+                  rgba(255, 0, 255, ${0.15 * lineClearFlash.intensity}) 50%, 
+                  rgba(255, 255, 0, ${0.15 * lineClearFlash.intensity}) 100%)`,
+                mixBlendMode: "screen",
+              }}
+            />
+            <div className="pointer-events-none absolute right-[15%] top-[10%]">
+              <div
+                className="comic-burst animate-comic-pop"
+                style={{
+                  transform: `scale(${0.8 + lineClearFlash.intensity * 0.15})`,
+                }}
+              >
+                <span className="comic-text">
+                  {getLineClearText(lineClearFlash.linesCleared)}
+                </span>
+              </div>
+            </div>
+          </>
         )}
         <canvas
           ref={canvasRef}
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           style={{ transform: "scaleX(-1)" }}
         />
-        <div className="absolute left-4 top-4 z-10 flex flex-col gap-2 rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 backdrop-blur-sm">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-[10px] font-medium text-zinc-500">
-              CONTROL FEEDBACK
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowCalibration(!showCalibration)}
-              className="ml-4 text-[10px] text-zinc-400 hover:text-white"
-            >
-              {showCalibration ? "Hide" : "Show"} calibration
-            </button>
-          </div>
-          <div
-            className={`flex items-center gap-2 font-medium ${leftBrowRaised ? "text-accent" : "text-zinc-400"}`}
-          >
-            <span className={leftBrowRaised ? "text-accent" : "text-zinc-600"}>
-              ←
-            </span>
-            Left brow: {leftBrowRaised ? "raised" : "neutral"}
-          </div>
-          <div
-            className={`flex items-center gap-2 font-medium ${rightBrowRaised ? "text-accent" : "text-zinc-400"}`}
-          >
-            <span className={rightBrowRaised ? "text-accent" : "text-zinc-600"}>
-              →
-            </span>
-            Right brow: {rightBrowRaised ? "raised" : "neutral"}
-          </div>
-          <div
-            className={`flex items-center gap-2 font-medium ${mouthOpen ? "text-accent" : "text-zinc-400"}`}
-          >
-            <span className={mouthOpen ? "text-accent" : "text-zinc-600"}>
-              ↓
-            </span>
-            Mouth: {mouthOpen ? "open" : "closed"}
-          </div>
-          
-          {showCalibration && (
-            <div className="mt-3 border-t border-zinc-700 pt-3">
-              <div className="mb-2 text-[10px] font-medium text-zinc-500">
-                LANDMARK-BASED DETECTION (outer brow points)
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Your Left Brow (← move left)</span>
-                    <span className={landmarkScores.leftBrowLift > BROW_LIFT_THRESHOLD ? "text-accent" : ""}>
-                      {(landmarkScores.leftBrowLift * 1000).toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div 
-                      className="h-full bg-accent transition-all duration-75"
-                      style={{ width: `${Math.min(Math.max(landmarkScores.leftBrowLift * 1000 / 30, 0), 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Your Right Brow (→ move right)</span>
-                    <span className={landmarkScores.rightBrowLift > BROW_LIFT_THRESHOLD ? "text-accent" : ""}>
-                      {(landmarkScores.rightBrowLift * 1000).toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div 
-                      className="h-full bg-accent transition-all duration-75"
-                      style={{ width: `${Math.min(Math.max(landmarkScores.rightBrowLift * 1000 / 30, 0), 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Inner brow (↻ rotate)</span>
-                    <span className={blendshapeScores.browInnerUp > EYEBROW_RAISED_THRESHOLD ? "text-accent" : ""}>
-                      {blendshapeScores.browInnerUp.toFixed(3)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div 
-                      className="h-full bg-blue-500 transition-all duration-75"
-                      style={{ width: `${Math.min(blendshapeScores.browInnerUp * 100, 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Mouth ratio (↓ drop)</span>
-                    <span className={blendshapeScores.mouthRatio > MOUTH_OPEN_THRESHOLD ? "text-accent" : ""}>
-                      {blendshapeScores.mouthRatio.toFixed(3)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div 
-                      className="h-full bg-orange-500 transition-all duration-75"
-                      style={{ width: `${Math.min(blendshapeScores.mouthRatio * 100 / 0.6, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
-                <div>Brow threshold: {BROW_LIFT_THRESHOLD * 1000} (trigger) / {BROW_LOWER_THRESHOLD * 1000} (release)</div>
-                <div>Mouth threshold: {MOUTH_OPEN_THRESHOLD}</div>
-                <div>Baseline: L={landmarkScores.leftBrowBaseline !== null ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1) : "calibrating..."} R={landmarkScores.rightBrowBaseline !== null ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1) : "calibrating..."}</div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {faceLost && status === "ready" && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
@@ -785,13 +1546,180 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         </button>
       </div>
 
-      <div className="flex shrink-0 items-center justify-center overflow-auto p-4">
+      <div className="flex w-auto shrink-0 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
         <TetrisOverlay
           tetrisRef={tetrisRef}
           visible={status === "ready"}
           onGameOver={onGameOver}
           onLineClear={handleLineClear}
         />
+
+        {/* Control Feedback Panel */}
+        <div className="flex w-full max-w-[280px] flex-col gap-1 rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-[10px] backdrop-blur-sm sm:gap-1.5 sm:text-xs md:gap-2 md:px-3 md:py-2">
+          <div className="mb-0.5 flex flex-wrap items-center justify-between gap-1 sm:mb-1">
+            <span className="text-[8px] font-medium text-zinc-500 sm:text-[10px]">
+              FEEDBACK
+            </span>
+            <div className="flex flex-wrap gap-1.5 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setShowGooglyEyes(!showGooglyEyes)}
+                className={`text-[8px] sm:text-[10px] ${showGooglyEyes ? "text-accent" : "text-zinc-400"} hover:text-white`}
+              >
+                {showGooglyEyes ? "👀" : "👀"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLandmarks(!showLandmarks)}
+                className={`text-[8px] sm:text-[10px] ${showLandmarks ? "text-accent" : "text-zinc-400"} hover:text-white`}
+              >
+                ●
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCalibration(!showCalibration)}
+                className="text-[8px] text-zinc-400 hover:text-white sm:text-[10px]"
+              >
+                {showCalibration ? "−" : "+"}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            <div
+              className={`flex items-center gap-1 font-medium ${leftBrowRaised ? "text-accent" : "text-zinc-400"}`}
+            >
+              <span className={leftBrowRaised ? "text-accent" : "text-zinc-600"}>←</span>
+              <span className="hidden sm:inline">Left:</span> {leftBrowRaised ? "↑" : "−"}
+            </div>
+            <div
+              className={`flex items-center gap-1 font-medium ${rightBrowRaised ? "text-accent" : "text-zinc-400"}`}
+            >
+              <span className={rightBrowRaised ? "text-accent" : "text-zinc-600"}>→</span>
+              <span className="hidden sm:inline">Right:</span> {rightBrowRaised ? "↑" : "−"}
+            </div>
+            <div
+              className={`flex items-center gap-1 font-medium ${mouthOpen ? "text-accent" : "text-zinc-400"}`}
+            >
+              <span className={mouthOpen ? "text-accent" : "text-zinc-600"}>↓</span>
+              <span className="hidden sm:inline">Mouth:</span> {mouthOpen ? "○" : "−"}
+            </div>
+          </div>
+
+          {showCalibration && (
+            <div className="mt-3 border-t border-zinc-700 pt-3">
+              <div className="mb-2 text-[10px] font-medium text-zinc-500">
+                LANDMARK-BASED DETECTION (outer brow points)
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Your Left Brow (← move left)</span>
+                    <span
+                      className={
+                        landmarkScores.leftBrowLift > BROW_LIFT_THRESHOLD
+                          ? "text-accent"
+                          : ""
+                      }
+                    >
+                      {(landmarkScores.leftBrowLift * 1000).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full bg-accent transition-all duration-75"
+                      style={{
+                        width: `${Math.min(Math.max((landmarkScores.leftBrowLift * 1000) / 30, 0), 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Your Right Brow (→ move right)</span>
+                    <span
+                      className={
+                        landmarkScores.rightBrowLift > BROW_LIFT_THRESHOLD
+                          ? "text-accent"
+                          : ""
+                      }
+                    >
+                      {(landmarkScores.rightBrowLift * 1000).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full bg-accent transition-all duration-75"
+                      style={{
+                        width: `${Math.min(Math.max((landmarkScores.rightBrowLift * 1000) / 30, 0), 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Inner brow (↻ rotate)</span>
+                    <span
+                      className={
+                        blendshapeScores.browInnerUp > EYEBROW_RAISED_THRESHOLD
+                          ? "text-accent"
+                          : ""
+                      }
+                    >
+                      {blendshapeScores.browInnerUp.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-75"
+                      style={{
+                        width: `${Math.min(blendshapeScores.browInnerUp * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Mouth ratio (↓ drop)</span>
+                    <span
+                      className={
+                        blendshapeScores.mouthRatio > MOUTH_OPEN_THRESHOLD
+                          ? "text-accent"
+                          : ""
+                      }
+                    >
+                      {blendshapeScores.mouthRatio.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full bg-orange-500 transition-all duration-75"
+                      style={{
+                        width: `${Math.min((blendshapeScores.mouthRatio * 100) / 0.6, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
+                <div>
+                  Brow threshold: {BROW_LIFT_THRESHOLD * 1000} (trigger) /{" "}
+                  {BROW_LOWER_THRESHOLD * 1000} (release)
+                </div>
+                <div>Mouth threshold: {MOUTH_OPEN_THRESHOLD}</div>
+                <div>
+                  Baseline: L=
+                  {landmarkScores.leftBrowBaseline !== null
+                    ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1)
+                    : "calibrating..."}{" "}
+                  R=
+                  {landmarkScores.rightBrowBaseline !== null
+                    ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1)
+                    : "calibrating..."}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {(status === "requesting" || status === "loading") && (

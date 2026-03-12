@@ -10,9 +10,40 @@ import {
 
 const COLS = 10;
 const ROWS = 20;
-const CELL_SIZE = 16;
-const PREVIEW_CELL = 10;
 const HIGH_SCORE_KEY = "eyebrow-tetris-high-score";
+
+function useCellSize() {
+  const [cellSize, setCellSize] = useState(16);
+  const [previewCell, setPreviewCell] = useState(10);
+
+  useEffect(() => {
+    const updateSize = () => {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // For horizontal split layout, game panel gets roughly half the width
+      // Account for padding and ensure grid fits in available space
+      const availableWidth = viewportWidth * 0.45 - 32; // ~45% of viewport minus padding
+      const availableHeight = viewportHeight - 220; // minus header, controls, feedback panel, padding
+      
+      const cellFromWidth = Math.floor(availableWidth / COLS);
+      const cellFromHeight = Math.floor(availableHeight / ROWS);
+      
+      // Use the smaller of the two to ensure grid fits both dimensions
+      const newCellSize = Math.max(8, Math.min(20, Math.min(cellFromWidth, cellFromHeight)));
+      setCellSize(newCellSize);
+      setPreviewCell(Math.max(6, Math.floor(newCellSize * 0.625)));
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => {
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
+
+  return { cellSize, previewCell };
+}
 
 const PIECES: number[][][] = [
   [[1, 1, 1, 1]], // I
@@ -67,6 +98,7 @@ export interface TetrisOverlayRef {
   rotate: () => void;
   hardDrop: () => void;
   getCurrentPiece: () => TetrisPiece | null;
+  getDangerLevel: () => { isInDanger: boolean; dangerLevel: number };
 }
 
 export interface GameStats {
@@ -92,6 +124,7 @@ export function TetrisOverlay({
   onGameOver,
   onLineClear,
 }: TetrisOverlayProps) {
+  const { cellSize, previewCell } = useCellSize();
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
     Array(ROWS)
       .fill(null)
@@ -264,11 +297,12 @@ export function TetrisOverlay({
     }
 
     setGrid(nextGrid);
-    const nextIdx = getNextPieceIndex();
-    setNextPieceIndex(nextIdx);
-    const newPiece = spawn(nextIdx);
+    // Spawn the piece that was shown in "Next" preview
+    const newPiece = spawn(nextPieceIndex);
     setPiece(newPiece);
-  }, [mergePiece, clearLines, spawn, level, lines]);
+    // Generate a new "Next" piece for the preview
+    setNextPieceIndex(getNextPieceIndex());
+  }, [mergePiece, clearLines, spawn, level, lines, nextPieceIndex, onLineClear]);
 
   const move = useCallback(
     (dx: number) => {
@@ -335,9 +369,11 @@ export function TetrisOverlay({
     setLevel(1);
     setLines(0);
     setPaused(false);
+    // Generate the first piece and set the next piece for preview
+    const firstPieceIdx = getNextPieceIndex();
     const nextIdx = getNextPieceIndex();
     setNextPieceIndex(nextIdx);
-    const p = createPiece(nextIdx);
+    const p = createPiece(firstPieceIdx);
     setPiece(p);
   }, [createPiece]);
 
@@ -347,6 +383,7 @@ export function TetrisOverlay({
     rotate,
     hardDrop,
     getCurrentPiece: () => pieceRef.current,
+    getDangerLevel: () => ({ isInDanger, dangerLevel }),
   }));
 
   useEffect(() => {
@@ -362,9 +399,11 @@ export function TetrisOverlay({
     setLevel(1);
     setLines(0);
     setPaused(false);
+    // Generate the first piece and set the next piece for preview
+    const firstPieceIdx = getNextPieceIndex();
     const nextIdx = getNextPieceIndex();
     setNextPieceIndex(nextIdx);
-    const p = createPiece(nextIdx);
+    const p = createPiece(firstPieceIdx);
     setPiece(p);
   }, [visible, createPiece]);
 
@@ -438,6 +477,21 @@ export function TetrisOverlay({
     return shape[dy][dx] === 1;
   };
 
+  // Calculate how high the stack is (0 = empty, ROWS = full)
+  const getStackHeight = (): number => {
+    for (let row = 0; row < ROWS; row++) {
+      if (grid[row].some(cell => cell !== null)) {
+        return ROWS - row;
+      }
+    }
+    return 0;
+  };
+
+  const stackHeight = getStackHeight();
+  const dangerThreshold = ROWS * 0.6; // 60% of board height = danger zone
+  const isInDanger = stackHeight >= dangerThreshold;
+  const dangerLevel = Math.min(1, (stackHeight - dangerThreshold) / (ROWS * 0.3)); // 0-1 scale for intensity
+
   const CONTROL_MAPPING = [
     { cmd: "← Move Left", gesture: "Left Brow Up", icon: "←" },
     { cmd: "Move Right →", gesture: "Right Brow Up", icon: "→" },
@@ -447,10 +501,10 @@ export function TetrisOverlay({
 
   return (
     <div
-      className={`flex flex-col items-center gap-2 rounded-lg border border-zinc-600 bg-black/80 p-3 backdrop-blur-sm ${lineClearFlash ? "animate-screen-shake" : ""}`}
+      className={`flex flex-col items-center gap-1 rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
     >
       <div className="flex w-full items-center justify-between">
-        <div className="pixel-font text-sm text-accent">EYEBROW TETRIS</div>
+        <div className="pixel-font text-[10px] text-accent sm:text-sm">EYEBROW TETRIS</div>
         {!gameOver && (
           <button
             type="button"
@@ -461,43 +515,51 @@ export function TetrisOverlay({
           </button>
         )}
       </div>
-      <div className="flex w-full items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="score-glow text-xs text-zinc-400">
+      <div className="flex w-full items-start justify-between gap-2 sm:gap-3">
+        <div className="flex flex-col gap-0.5 sm:gap-1">
+          <div className="score-glow text-[10px] text-zinc-400 sm:text-xs">
             Score: {score} · L{level}
           </div>
           {highScore > 0 && (
-            <div className="text-[10px] text-zinc-500">Best: {highScore}</div>
+            <div className="text-[8px] text-zinc-500 sm:text-[10px]">Best: {highScore}</div>
           )}
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <div className="text-[10px] text-zinc-500">Next</div>
           <div
-            className="grid gap-px bg-zinc-800/80 p-0.5"
+            className="flex items-center justify-center bg-zinc-800/80 p-0.5"
             style={{
-              gridTemplateColumns: `repeat(${Math.min(4, PIECES[nextPieceIndex][0].length)}, ${PREVIEW_CELL}px)`,
-              gridTemplateRows: `repeat(${PIECES[nextPieceIndex].length}, ${PREVIEW_CELL}px)`,
+              width: 4 * previewCell + 4,
+              height: 2 * previewCell + 2,
             }}
           >
-            {PIECES[nextPieceIndex].flat().map((c, i) => (
-              <div
-                key={i}
-                className="border border-zinc-700/50"
-                style={{
-                  width: PREVIEW_CELL,
-                  height: PREVIEW_CELL,
-                  backgroundColor: c ? COLORS[nextPieceIndex] : "transparent",
-                }}
-              />
-            ))}
+            <div
+              className="grid gap-px"
+              style={{
+                gridTemplateColumns: `repeat(${PIECES[nextPieceIndex][0].length}, ${previewCell}px)`,
+                gridTemplateRows: `repeat(${PIECES[nextPieceIndex].length}, ${previewCell}px)`,
+              }}
+            >
+              {PIECES[nextPieceIndex].flat().map((c, i) => (
+                <div
+                  key={i}
+                  className="border border-zinc-700/50"
+                  style={{
+                    width: previewCell,
+                    height: previewCell,
+                    backgroundColor: c ? COLORS[nextPieceIndex] : "transparent",
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
       <div
         className="relative grid gap-px bg-zinc-800 p-1"
         style={{
-          gridTemplateColumns: `repeat(${COLS}, ${CELL_SIZE}px)`,
-          gridTemplateRows: `repeat(${ROWS}, ${CELL_SIZE}px)`,
+          gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
+          gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
         }}
       >
         {Array.from({ length: ROWS * COLS }, (_, i) => {
@@ -525,8 +587,8 @@ export function TetrisOverlay({
               key={i}
               className="border border-zinc-700/50"
               style={{
-                width: CELL_SIZE,
-                height: CELL_SIZE,
+                width: cellSize,
+                height: cellSize,
                 backgroundColor: color ?? "transparent",
                 opacity: isGhost ? 0.35 : 1,
               }}
@@ -546,28 +608,12 @@ export function TetrisOverlay({
           </button>
         </div>
       )}
-      <div className="mt-1 w-full">
-        <div className="mb-1 text-[10px] font-medium text-zinc-400">
-          CONTROLS
-        </div>
-        <table className="w-full text-[10px] text-zinc-500">
-          <thead>
-            <tr className="border-b border-zinc-600">
-              <th className="py-0.5 text-left font-medium">Command</th>
-              <th className="py-0.5 text-left font-medium">Gesture</th>
-              <th className="w-6 py-0.5 text-center font-medium">Icon</th>
-            </tr>
-          </thead>
-          <tbody>
-            {CONTROL_MAPPING.map(({ cmd, gesture, icon }) => (
-              <tr key={cmd} className="border-b border-zinc-700/50">
-                <td className="py-0.5">{cmd}</td>
-                <td className="py-0.5">{gesture}</td>
-                <td className="py-0.5 text-center text-accent">{icon}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Compact controls - always visible */}
+      <div className="mt-1 flex w-full flex-wrap justify-center gap-1.5 text-[8px] text-zinc-500 sm:gap-2 sm:text-[9px]">
+        <span><span className="text-accent">←</span> L.Brow</span>
+        <span><span className="text-accent">→</span> R.Brow</span>
+        <span><span className="text-accent">↻</span> Both</span>
+        <span><span className="text-accent">↓</span> Mouth</span>
       </div>
     </div>
   );
