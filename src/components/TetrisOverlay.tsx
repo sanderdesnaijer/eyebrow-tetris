@@ -42,9 +42,9 @@ const PIECES: number[][][] = [
   ], // L
 ];
 
-const COLORS = [
-  "var(--blue)", // I - cyan
-  "var(--accent)", // O - accent
+export const TETRIS_COLORS = [
+  "#06b6d4", // I - cyan
+  "#eab308", // O - yellow (accent)
   "#a855f7", // T - purple
   "#22c55e", // S - green
   "#ef4444", // Z - red
@@ -52,11 +52,21 @@ const COLORS = [
   "#f97316", // L - orange
 ];
 
+const COLORS = TETRIS_COLORS;
+
+export interface TetrisPiece {
+  shape: number[][];
+  color: number;
+  x: number;
+  y: number;
+}
+
 export interface TetrisOverlayRef {
   moveLeft: () => void;
   moveRight: () => void;
   rotate: () => void;
   hardDrop: () => void;
+  getCurrentPiece: () => TetrisPiece | null;
 }
 
 export interface GameStats {
@@ -69,6 +79,7 @@ interface TetrisOverlayProps {
   tetrisRef: React.RefObject<TetrisOverlayRef | null>;
   visible: boolean;
   onGameOver?: (stats: GameStats) => void;
+  onLineClear?: (linesCleared: number) => void;
 }
 
 function getNextPieceIndex(): number {
@@ -79,6 +90,7 @@ export function TetrisOverlay({
   tetrisRef,
   visible,
   onGameOver,
+  onLineClear,
 }: TetrisOverlayProps) {
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
     Array(ROWS)
@@ -151,7 +163,7 @@ export function TetrisOverlay({
             const ny = py + dy;
             const nx = px + dx;
             if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
-            if (ny >= 0 && g[ny][nx]) return true;
+            if (ny >= 0 && g[ny][nx] !== null) return true;
           }
         }
       }
@@ -248,6 +260,7 @@ export function TetrisOverlay({
         return newScore;
       });
       setLevel(() => Math.min(10, Math.floor((lines + cleared) / 10) + 1));
+      onLineClear?.(cleared);
     }
 
     setGrid(nextGrid);
@@ -333,6 +346,7 @@ export function TetrisOverlay({
     moveRight: () => move(1),
     rotate,
     hardDrop,
+    getCurrentPiece: () => pieceRef.current,
   }));
 
   useEffect(() => {

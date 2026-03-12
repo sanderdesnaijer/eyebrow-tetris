@@ -9,6 +9,8 @@ import {
   TetrisOverlay,
   type TetrisOverlayRef,
   type GameStats,
+  type TetrisPiece,
+  TETRIS_COLORS,
 } from "./TetrisOverlay";
 
 const MEDIAPIPE_NOISE_RE =
@@ -39,7 +41,10 @@ const MOUTH_OPEN_THRESHOLD = 0.42;
 const EYEBROW_RAISED_THRESHOLD = 0.3;
 
 // Landmark-based brow detection threshold (ratio of brow lift to face height)
-const BROW_LIFT_THRESHOLD = 0.018;
+// Higher value = less sensitive (requires more obvious brow raise)
+const BROW_LIFT_THRESHOLD = 0.025;
+// Hysteresis: once raised, brow must drop below this to count as "neutral" again
+const BROW_LOWER_THRESHOLD = 0.018;
 
 function getBlendshapeScore(
   classifications:
@@ -123,7 +128,17 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     leftBrowBaseline: null as number | null,
     rightBrowBaseline: null as number | null,
   });
+  const [lineClearFlash, setLineClearFlash] = useState<{
+    active: boolean;
+    intensity: number;
+  }>({ active: false, intensity: 1 });
   const isStartingRef = useRef(false);
+
+  const handleLineClear = useCallback((linesCleared: number) => {
+    const intensity = Math.min(linesCleared, 4);
+    setLineClearFlash({ active: true, intensity });
+    setTimeout(() => setLineClearFlash({ active: false, intensity: 1 }), 800);
+  }, []);
 
   const stopEverything = useCallback(() => {
     isStartingRef.current = false;
@@ -229,6 +244,60 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     highlightDetectionPoint(LEFT_OUTER_BROW_IDX, rightBrowRaised);
     // Right outer brow point (appears on left side of mirrored video)
     highlightDetectionPoint(RIGHT_OUTER_BROW_IDX, leftBrowRaised);
+
+    // Draw ghost piece hovering over eyebrows
+    const drawGhostPiece = (piece: TetrisPiece) => {
+      // Get center brow landmarks (middle points of each eyebrow)
+      const leftBrowCenter = faceLandmarks[LEFT_BROW_INDICES[2]];
+      const rightBrowCenter = faceLandmarks[RIGHT_BROW_INDICES[2]];
+      
+      if (!leftBrowCenter || !rightBrowCenter) return;
+      
+      // Calculate center position between eyebrows
+      const centerX = ((leftBrowCenter.x + rightBrowCenter.x) / 2) * canvas.width;
+      const centerY = ((leftBrowCenter.y + rightBrowCenter.y) / 2) * canvas.height;
+      
+      // Calculate the distance between eyebrows to scale the piece appropriately
+      const browDistance = Math.abs(rightBrowCenter.x - leftBrowCenter.x) * canvas.width;
+      const cellSize = Math.max(8, Math.min(20, browDistance / 6));
+      
+      // Offset upward so piece hovers above the eyebrows
+      const offsetY = -cellSize * 2;
+      
+      const pieceWidth = piece.shape[0].length * cellSize;
+      const pieceHeight = piece.shape.length * cellSize;
+      const startX = centerX - pieceWidth / 2;
+      const startY = centerY + offsetY - pieceHeight / 2;
+      
+      // Draw with semi-transparency (ghost effect)
+      ctx.globalAlpha = 0.6;
+      
+      piece.shape.forEach((row, dy) => {
+        row.forEach((cell, dx) => {
+          if (cell) {
+            const x = startX + dx * cellSize;
+            const y = startY + dy * cellSize;
+            
+            // Fill with piece color
+            ctx.fillStyle = TETRIS_COLORS[piece.color];
+            ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+            
+            // Add border for definition
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, cellSize - 1, cellSize - 1);
+          }
+        });
+      });
+      
+      ctx.globalAlpha = 1;
+    };
+
+    // Get current piece from tetris and draw ghost
+    const currentPiece = tetrisRef.current?.getCurrentPiece?.();
+    if (currentPiece) {
+      drawGhostPiece(currentPiece);
+    }
   }, [faceLandmarks, mouthOpen, leftBrowRaised, rightBrowRaised]);
 
   useEffect(() => {
@@ -416,9 +485,18 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                     rightBrowBaseline: leftBrowBaselineRef.current,
                   });
                   
-                  // Detect raised brows using landmark-based measurement (swapped for mirror)
-                  leftBrow = rightBrowLift > BROW_LIFT_THRESHOLD;   // User's left = MediaPipe's right
-                  rightBrow = leftBrowLift > BROW_LIFT_THRESHOLD;   // User's right = MediaPipe's left
+                  // Detect raised brows using landmark-based measurement with hysteresis (swapped for mirror)
+                  // User's left = MediaPipe's right, User's right = MediaPipe's left
+                  // Hysteresis: use higher threshold to trigger, lower threshold to release
+                  const wasLeftRaised = prevLeftBrowRef.current;
+                  const wasRightRaised = prevRightBrowRef.current;
+                  
+                  leftBrow = wasLeftRaised 
+                    ? rightBrowLift > BROW_LOWER_THRESHOLD   // Already raised: stay raised until below lower threshold
+                    : rightBrowLift > BROW_LIFT_THRESHOLD;   // Not raised: need to exceed higher threshold
+                  rightBrow = wasRightRaised
+                    ? leftBrowLift > BROW_LOWER_THRESHOLD    // Already raised: stay raised until below lower threshold
+                    : leftBrowLift > BROW_LIFT_THRESHOLD;    // Not raised: need to exceed higher threshold
                 }
 
                 setLeftBrowRaised(leftBrow);
@@ -539,7 +617,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--background)] md:flex-row"
+      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--background)] md:flex-row ${
+        lineClearFlash.active ? "animate-screen-shake-intense" : ""
+      }`}
     >
       <div className="relative flex min-h-[40vh] min-w-0 flex-1 md:min-h-0">
         <video
@@ -547,9 +627,29 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           playsInline
           muted
           autoPlay
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ transform: "scaleX(-1)" }}
+          className={`absolute inset-0 h-full w-full object-cover transition-all duration-100 ${
+            lineClearFlash.active ? "line-clear-flash" : ""
+          }`}
+          style={{
+            transform: "scaleX(-1)",
+            filter: lineClearFlash.active
+              ? `saturate(${2 + lineClearFlash.intensity}) contrast(${1.2 + lineClearFlash.intensity * 0.2}) hue-rotate(${lineClearFlash.intensity * 30}deg) brightness(${1.2 + lineClearFlash.intensity * 0.15})`
+              : undefined,
+            imageRendering: lineClearFlash.active ? "pixelated" : undefined,
+          }}
         />
+        {lineClearFlash.active && (
+          <div
+            className="pointer-events-none absolute inset-0 animate-pulse"
+            style={{
+              background: `linear-gradient(45deg, 
+                rgba(0, 255, 255, ${0.15 * lineClearFlash.intensity}) 0%, 
+                rgba(255, 0, 255, ${0.15 * lineClearFlash.intensity}) 50%, 
+                rgba(255, 255, 0, ${0.15 * lineClearFlash.intensity}) 100%)`,
+              mixBlendMode: "screen",
+            }}
+          />
+        )}
         <canvas
           ref={canvasRef}
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -657,7 +757,8 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 </div>
               </div>
               <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
-                <div>Threshold: {BROW_LIFT_THRESHOLD * 1000} (brows) / {MOUTH_OPEN_THRESHOLD} (mouth)</div>
+                <div>Brow threshold: {BROW_LIFT_THRESHOLD * 1000} (trigger) / {BROW_LOWER_THRESHOLD * 1000} (release)</div>
+                <div>Mouth threshold: {MOUTH_OPEN_THRESHOLD}</div>
                 <div>Baseline: L={landmarkScores.leftBrowBaseline !== null ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1) : "calibrating..."} R={landmarkScores.rightBrowBaseline !== null ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1) : "calibrating..."}</div>
               </div>
             </div>
@@ -689,6 +790,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           tetrisRef={tetrisRef}
           visible={status === "ready"}
           onGameOver={onGameOver}
+          onLineClear={handleLineClear}
         />
       </div>
 
