@@ -38,6 +38,9 @@ const FACE_DETECTION_INTERVAL_MS = 50;
 const MOUTH_OPEN_THRESHOLD = 0.42;
 const EYEBROW_RAISED_THRESHOLD = 0.3;
 
+// Landmark-based brow detection threshold (ratio of brow lift to face height)
+const BROW_LIFT_THRESHOLD = 0.018;
+
 function getBlendshapeScore(
   classifications:
     | { categories: { categoryName: string; score: number }[] }
@@ -60,6 +63,18 @@ const MOUTH_OUTER_INDICES = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
 const LEFT_BROW_INDICES = [70, 63, 105, 66, 107];
 const RIGHT_BROW_INDICES = [300, 293, 334, 296, 336];
 
+// Outer brow landmarks (near the temples/ears) - these move the most when raising a single brow
+const LEFT_OUTER_BROW_IDX = 70;   // Leftmost point of left eyebrow
+const RIGHT_OUTER_BROW_IDX = 300; // Rightmost point of right eyebrow
+
+// Reference landmarks for measuring brow lift (outer eye corners)
+const LEFT_EYE_OUTER_IDX = 33;    // Outer corner of left eye
+const RIGHT_EYE_OUTER_IDX = 263;  // Outer corner of right eye
+
+// For face height normalization
+const NOSE_TIP_IDX = 4;
+const FOREHEAD_IDX = 10;
+
 export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -74,6 +89,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const prevLeftBrowRef = useRef(false);
   const prevRightBrowRef = useRef(false);
   const prevMouthOpenRef = useRef(false);
+  
+  // Baseline brow positions (established when face is neutral)
+  const leftBrowBaselineRef = useRef<number | null>(null);
+  const rightBrowBaselineRef = useRef<number | null>(null);
+  const baselineFrameCountRef = useRef(0);
 
   const [status, setStatus] = useState<
     "idle" | "requesting" | "loading" | "ready" | "error"
@@ -84,6 +104,19 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const [rightBrowRaised, setRightBrowRaised] = useState(false);
   const [faceLost, setFaceLost] = useState(false);
   const [faceLandmarks, setFaceLandmarks] = useState<FaceLandmark[] | null>(null);
+  const [showCalibration, setShowCalibration] = useState(false);
+  const [blendshapeScores, setBlendshapeScores] = useState({
+    browOuterUpLeft: 0,
+    browOuterUpRight: 0,
+    browInnerUp: 0,
+    mouthRatio: 0,
+  });
+  const [landmarkScores, setLandmarkScores] = useState({
+    leftBrowLift: 0,
+    rightBrowLift: 0,
+    leftBrowBaseline: null as number | null,
+    rightBrowBaseline: null as number | null,
+  });
   const isStartingRef = useRef(false);
 
   const stopEverything = useCallback(() => {
@@ -161,9 +194,32 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       });
     };
 
-    drawLandmarkGroup(LEFT_BROW_INDICES, leftBrowRaised);
-    drawLandmarkGroup(RIGHT_BROW_INDICES, rightBrowRaised);
+    // Note: Video is mirrored, so MediaPipe's LEFT_BROW_INDICES appear on the right
+    // side of the screen (user's right brow), and vice versa
+    drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
+    drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
     drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen);
+    
+    // Highlight the specific outer brow detection points with larger markers
+    const highlightDetectionPoint = (idx: number, isActive: boolean) => {
+      const point = faceLandmarks[idx];
+      if (point) {
+        const x = point.x * canvas.width;
+        const y = point.y * canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = isActive ? "#22c55e" : "#f59e0b";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    };
+    
+    // Left outer brow point (appears on right side of mirrored video)
+    highlightDetectionPoint(LEFT_OUTER_BROW_IDX, rightBrowRaised);
+    // Right outer brow point (appears on left side of mirrored video)
+    highlightDetectionPoint(RIGHT_OUTER_BROW_IDX, leftBrowRaised);
   }, [faceLandmarks, mouthOpen, leftBrowRaised, rightBrowRaised]);
 
   useEffect(() => {
@@ -288,14 +344,73 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                   "browInnerUp"
                 );
 
-                // Swap left/right because video is mirrored (scaleX(-1))
-                // MediaPipe's "right" is the user's left in the mirrored view
-                const leftBrow =
-                  browOuterUpRight > EYEBROW_RAISED_THRESHOLD ||
-                  browInnerUp > EYEBROW_RAISED_THRESHOLD;
-                const rightBrow =
-                  browOuterUpLeft > EYEBROW_RAISED_THRESHOLD ||
-                  browInnerUp > EYEBROW_RAISED_THRESHOLD;
+                setBlendshapeScores({
+                  browOuterUpLeft,
+                  browOuterUpRight,
+                  browInnerUp,
+                  mouthRatio: ratio,
+                });
+
+                // Landmark-based brow detection using outer brow points
+                const leftOuterBrow = faceLandmarks[LEFT_OUTER_BROW_IDX];
+                const rightOuterBrow = faceLandmarks[RIGHT_OUTER_BROW_IDX];
+                const leftEyeOuter = faceLandmarks[LEFT_EYE_OUTER_IDX];
+                const rightEyeOuter = faceLandmarks[RIGHT_EYE_OUTER_IDX];
+                const noseTip = faceLandmarks[NOSE_TIP_IDX];
+                const forehead = faceLandmarks[FOREHEAD_IDX];
+
+                let leftBrow = false;
+                let rightBrow = false;
+                let leftBrowLift = 0;
+                let rightBrowLift = 0;
+
+                if (leftOuterBrow && rightOuterBrow && leftEyeOuter && rightEyeOuter && noseTip && forehead) {
+                  // Calculate face height for normalization
+                  const faceHeight = Math.abs(noseTip.y - forehead.y);
+                  
+                  // Calculate brow-to-eye distance (lower Y = higher on screen = raised brow)
+                  // Negative values mean brow is above eye corner
+                  const leftBrowToEye = leftOuterBrow.y - leftEyeOuter.y;
+                  const rightBrowToEye = rightOuterBrow.y - rightEyeOuter.y;
+                  
+                  // Normalize by face height
+                  const leftBrowRatio = leftBrowToEye / faceHeight;
+                  const rightBrowRatio = rightBrowToEye / faceHeight;
+                  
+                  // Establish baseline during first 30 frames (about 1.5 seconds)
+                  if (baselineFrameCountRef.current < 30) {
+                    baselineFrameCountRef.current++;
+                    if (leftBrowBaselineRef.current === null) {
+                      leftBrowBaselineRef.current = leftBrowRatio;
+                      rightBrowBaselineRef.current = rightBrowRatio;
+                    } else {
+                      // Running average for baseline
+                      leftBrowBaselineRef.current = leftBrowBaselineRef.current * 0.9 + leftBrowRatio * 0.1;
+                      rightBrowBaselineRef.current = rightBrowBaselineRef.current! * 0.9 + rightBrowRatio * 0.1;
+                    }
+                  }
+                  
+                  // Calculate lift from baseline (negative = raised)
+                  const leftBaseline = leftBrowBaselineRef.current ?? leftBrowRatio;
+                  const rightBaseline = rightBrowBaselineRef.current ?? rightBrowRatio;
+                  
+                  leftBrowLift = leftBaseline - leftBrowRatio;  // Positive when raised
+                  rightBrowLift = rightBaseline - rightBrowRatio;  // Positive when raised
+                  
+                  // Swap left/right because video is mirrored
+                  // MediaPipe's "left" landmarks appear on the RIGHT side of the mirrored video (user's right)
+                  // So leftBrowLift from MediaPipe = user's RIGHT brow
+                  setLandmarkScores({
+                    leftBrowLift: rightBrowLift,   // User's left = MediaPipe's right
+                    rightBrowLift: leftBrowLift,   // User's right = MediaPipe's left
+                    leftBrowBaseline: rightBrowBaselineRef.current,
+                    rightBrowBaseline: leftBrowBaselineRef.current,
+                  });
+                  
+                  // Detect raised brows using landmark-based measurement (swapped for mirror)
+                  leftBrow = rightBrowLift > BROW_LIFT_THRESHOLD;   // User's left = MediaPipe's right
+                  rightBrow = leftBrowLift > BROW_LIFT_THRESHOLD;   // User's right = MediaPipe's left
+                }
 
                 setLeftBrowRaised(leftBrow);
                 setRightBrowRaised(rightBrow);
@@ -311,13 +426,21 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
                 const tetris = tetrisRef.current;
                 if (tetris) {
-                  if (leftBrow && rightBrow && (!prevLeft || !prevRight)) {
+                  // Both brows raised = rotate (only trigger once on transition)
+                  const bothBrowsNow = leftBrow && rightBrow;
+                  const bothBrowsPrev = prevLeft && prevRight;
+                  
+                  if (bothBrowsNow && !bothBrowsPrev) {
+                    // Both brows just raised together - rotate
                     tetris.rotate();
                   } else if (leftBrow && !prevLeft && !rightBrow) {
+                    // Only left brow raised (and right is not raised) - move left
                     tetris.moveLeft();
                   } else if (rightBrow && !prevRight && !leftBrow) {
+                    // Only right brow raised (and left is not raised) - move right
                     tetris.moveRight();
                   }
+                  
                   if (mouthOpenNow && !prevMouth) {
                     tetris.hardDrop();
                   }
@@ -424,8 +547,17 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           style={{ transform: "scaleX(-1)" }}
         />
         <div className="absolute left-4 top-4 z-10 flex flex-col gap-2 rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 backdrop-blur-sm">
-          <div className="mb-1 text-[10px] font-medium text-zinc-500">
-            CONTROL FEEDBACK
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[10px] font-medium text-zinc-500">
+              CONTROL FEEDBACK
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowCalibration(!showCalibration)}
+              className="ml-4 text-[10px] text-zinc-400 hover:text-white"
+            >
+              {showCalibration ? "Hide" : "Show"} calibration
+            </button>
           </div>
           <div
             className={`flex items-center gap-2 font-medium ${leftBrowRaised ? "text-accent" : "text-zinc-400"}`}
@@ -451,6 +583,76 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
             </span>
             Mouth: {mouthOpen ? "open" : "closed"}
           </div>
+          
+          {showCalibration && (
+            <div className="mt-3 border-t border-zinc-700 pt-3">
+              <div className="mb-2 text-[10px] font-medium text-zinc-500">
+                LANDMARK-BASED DETECTION (outer brow points)
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Your Left Brow (← move left)</span>
+                    <span className={landmarkScores.leftBrowLift > BROW_LIFT_THRESHOLD ? "text-accent" : ""}>
+                      {(landmarkScores.leftBrowLift * 1000).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div 
+                      className="h-full bg-accent transition-all duration-75"
+                      style={{ width: `${Math.min(Math.max(landmarkScores.leftBrowLift * 1000 / 30, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Your Right Brow (→ move right)</span>
+                    <span className={landmarkScores.rightBrowLift > BROW_LIFT_THRESHOLD ? "text-accent" : ""}>
+                      {(landmarkScores.rightBrowLift * 1000).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div 
+                      className="h-full bg-accent transition-all duration-75"
+                      style={{ width: `${Math.min(Math.max(landmarkScores.rightBrowLift * 1000 / 30, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Inner brow (↻ rotate)</span>
+                    <span className={blendshapeScores.browInnerUp > EYEBROW_RAISED_THRESHOLD ? "text-accent" : ""}>
+                      {blendshapeScores.browInnerUp.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-75"
+                      style={{ width: `${Math.min(blendshapeScores.browInnerUp * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Mouth ratio (↓ drop)</span>
+                    <span className={blendshapeScores.mouthRatio > MOUTH_OPEN_THRESHOLD ? "text-accent" : ""}>
+                      {blendshapeScores.mouthRatio.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div 
+                      className="h-full bg-orange-500 transition-all duration-75"
+                      style={{ width: `${Math.min(blendshapeScores.mouthRatio * 100 / 0.6, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
+                <div>Threshold: {BROW_LIFT_THRESHOLD * 1000} (brows) / {MOUTH_OPEN_THRESHOLD} (mouth)</div>
+                <div>Baseline: L={landmarkScores.leftBrowBaseline !== null ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1) : "calibrating..."} R={landmarkScores.rightBrowBaseline !== null ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1) : "calibrating..."}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {faceLost && status === "ready" && (
