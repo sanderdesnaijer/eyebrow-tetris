@@ -101,15 +101,19 @@ export interface TetrisOverlayRef {
   getDangerLevel: () => { isInDanger: boolean; dangerLevel: number };
 }
 
+export type InputMode = 'eyebrow' | 'keyboard';
+
 export interface GameStats {
   score: number;
   level: number;
   lines: number;
+  inputMode: InputMode;
 }
 
 interface TetrisOverlayProps {
   tetrisRef: React.RefObject<TetrisOverlayRef | null>;
   visible: boolean;
+  inputMode: InputMode;
   onGameOver?: (stats: GameStats) => void;
   onLineClear?: (linesCleared: number) => void;
 }
@@ -121,6 +125,7 @@ function getNextPieceIndex(): number {
 export function TetrisOverlay({
   tetrisRef,
   visible,
+  inputMode,
   onGameOver,
   onLineClear,
 }: TetrisOverlayProps) {
@@ -168,9 +173,9 @@ export function TetrisOverlay({
   useEffect(() => {
     if (gameOver && !gameOverCalledRef.current && onGameOver) {
       gameOverCalledRef.current = true;
-      onGameOver({ score, level, lines });
+      onGameOver({ score, level, lines, inputMode });
     }
-  }, [gameOver, score, level, lines, onGameOver]);
+  }, [gameOver, score, level, lines, inputMode, onGameOver]);
 
   const createPiece = useCallback((idx?: number) => {
     const i = idx ?? getNextPieceIndex();

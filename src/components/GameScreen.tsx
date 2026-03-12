@@ -6,6 +6,7 @@ import {
   TetrisOverlay,
   type TetrisOverlayRef,
   type GameStats,
+  type InputMode,
   TETRIS_COLORS,
 } from "./TetrisOverlay";
 
@@ -143,11 +144,16 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     linesCleared: number;
   }>({ active: false, intensity: 1, linesCleared: 0 });
   const [showGooglyEyes, setShowGooglyEyes] = useState(false);
-  const [showLandmarks, setShowLandmarks] = useState(true);
+  const [showLandmarks, setShowLandmarks] = useState(false);
+  const [keyboardLeftBrow, setKeyboardLeftBrow] = useState(false);
+  const [keyboardRightBrow, setKeyboardRightBrow] = useState(false);
+  const [keyboardMouthOpen, setKeyboardMouthOpen] = useState(false);
   const [stackDanger, setStackDanger] = useState({
     isInDanger: false,
     dangerLevel: 0,
   });
+  const [inputMode, setInputMode] = useState<InputMode>('eyebrow');
+  const inputModeRef = useRef<InputMode>('eyebrow');
   const googlyPupilRef = useRef({
     leftX: 0,
     leftY: 0,
@@ -376,7 +382,14 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       // Calculate the tilt based on height difference between brows
       const browHeightDiff = (rightBrowY - leftBrowY) * canvas.height;
-      const targetTilt = browHeightDiff * 0.05; // Convert to rotation
+      let targetTilt = browHeightDiff * 0.05; // Convert to rotation
+
+      // Add keyboard-triggered tilt for accessibility
+      if (keyboardLeftBrow && !keyboardRightBrow) {
+        targetTilt += 0.3; // Tilt right when left key pressed (piece moves left)
+      } else if (keyboardRightBrow && !keyboardLeftBrow) {
+        targetTilt -= 0.3; // Tilt left when right key pressed (piece moves right)
+      }
 
       // Calculate average brow height for vertical bounce
       const avgBrowLift = (physics.leftLiftVel + physics.rightLiftVel) / 2;
@@ -1113,11 +1126,86 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     showLandmarks,
     stackDanger,
     hardDropReaction,
+    keyboardLeftBrow,
+    keyboardRightBrow,
   ]);
 
   useEffect(() => {
     drawFaceOverlay();
   }, [drawFaceOverlay]);
+
+  // Keyboard controls for accessibility - triggers visual effects when arrow keys are pressed
+  useEffect(() => {
+    if (status !== "ready") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Track if keyboard is used for game controls (switches to keyboard mode)
+      const gameControlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'A', 'd', 'D', 'w', 'W', 's', 'S'];
+      if (gameControlKeys.includes(e.key) && inputModeRef.current === 'eyebrow') {
+        inputModeRef.current = 'keyboard';
+        setInputMode('keyboard');
+      }
+
+      switch (e.key) {
+        case "ArrowLeft":
+        case "a":
+        case "A":
+          setKeyboardLeftBrow(true);
+          break;
+        case "ArrowRight":
+        case "d":
+        case "D":
+          setKeyboardRightBrow(true);
+          break;
+        case "ArrowUp":
+        case "w":
+        case "W":
+          setKeyboardLeftBrow(true);
+          setKeyboardRightBrow(true);
+          break;
+        case "ArrowDown":
+        case "s":
+        case "S":
+          setKeyboardMouthOpen(true);
+          triggerHardDropReaction();
+          break;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowLeft":
+        case "a":
+        case "A":
+          setKeyboardLeftBrow(false);
+          break;
+        case "ArrowRight":
+        case "d":
+        case "D":
+          setKeyboardRightBrow(false);
+          break;
+        case "ArrowUp":
+        case "w":
+        case "W":
+          setKeyboardLeftBrow(false);
+          setKeyboardRightBrow(false);
+          break;
+        case "ArrowDown":
+        case "s":
+        case "S":
+          setKeyboardMouthOpen(false);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [status, triggerHardDropReaction]);
 
   // Poll the danger level from the Tetris game
   useEffect(() => {
@@ -1550,6 +1638,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         <TetrisOverlay
           tetrisRef={tetrisRef}
           visible={status === "ready"}
+          inputMode={inputMode}
           onGameOver={onGameOver}
           onLineClear={handleLineClear}
         />
@@ -1586,22 +1675,22 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
             <div
-              className={`flex items-center gap-1 font-medium ${leftBrowRaised ? "text-accent" : "text-zinc-400"}`}
+              className={`flex items-center gap-1 font-medium ${leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-400"}`}
             >
-              <span className={leftBrowRaised ? "text-accent" : "text-zinc-600"}>←</span>
-              <span className="hidden sm:inline">Left:</span> {leftBrowRaised ? "↑" : "−"}
+              <span className={leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-600"}>←</span>
+              <span className="hidden sm:inline">Left:</span> {leftBrowRaised || keyboardLeftBrow ? "↑" : "−"}
             </div>
             <div
-              className={`flex items-center gap-1 font-medium ${rightBrowRaised ? "text-accent" : "text-zinc-400"}`}
+              className={`flex items-center gap-1 font-medium ${rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-400"}`}
             >
-              <span className={rightBrowRaised ? "text-accent" : "text-zinc-600"}>→</span>
-              <span className="hidden sm:inline">Right:</span> {rightBrowRaised ? "↑" : "−"}
+              <span className={rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-600"}>→</span>
+              <span className="hidden sm:inline">Right:</span> {rightBrowRaised || keyboardRightBrow ? "↑" : "−"}
             </div>
             <div
-              className={`flex items-center gap-1 font-medium ${mouthOpen ? "text-accent" : "text-zinc-400"}`}
+              className={`flex items-center gap-1 font-medium ${mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-400"}`}
             >
-              <span className={mouthOpen ? "text-accent" : "text-zinc-600"}>↓</span>
-              <span className="hidden sm:inline">Mouth:</span> {mouthOpen ? "○" : "−"}
+              <span className={mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-600"}>↓</span>
+              <span className="hidden sm:inline">Mouth:</span> {mouthOpen || keyboardMouthOpen ? "○" : "−"}
             </div>
           </div>
 
@@ -1718,6 +1807,19 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Input Mode Indicator */}
+        <div className="w-full max-w-[280px] rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-center backdrop-blur-sm">
+          {inputMode === 'eyebrow' ? (
+            <span className="text-[10px] text-green-400 sm:text-xs">
+              👁️ Eyebrow mode — competing for glory!
+            </span>
+          ) : (
+            <span className="text-[10px] text-amber-400 sm:text-xs">
+              ⌨️ Keyboard mode — separate leaderboard
+            </span>
           )}
         </div>
       </div>

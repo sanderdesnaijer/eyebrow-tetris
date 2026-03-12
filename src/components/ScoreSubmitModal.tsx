@@ -78,7 +78,8 @@ export function ScoreSubmitModal({
       sanitized,
       stats.score,
       stats.level,
-      stats.lines
+      stats.lines,
+      stats.inputMode
     );
 
     if (result.success) {
@@ -106,6 +107,9 @@ export function ScoreSubmitModal({
           </p>
           <p className="text-sm text-zinc-400">
             Level {stats.level} · {stats.lines} lines
+          </p>
+          <p className={`text-sm ${stats.inputMode === 'eyebrow' ? 'text-green-400' : 'text-amber-400'}`}>
+            {stats.inputMode === 'eyebrow' ? '👁️ Eyebrow Leaderboard' : '⌨️ Keyboard Leaderboard'}
           </p>
         </div>
 

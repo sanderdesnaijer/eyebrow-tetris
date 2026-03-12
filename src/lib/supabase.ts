@@ -14,12 +14,15 @@ export const supabase =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
+export type InputMode = 'eyebrow' | 'keyboard';
+
 export interface LeaderboardEntry {
   id: string;
   nickname: string;
   score: number;
   level: number;
   lines: number;
+  input_mode: InputMode;
   created_at: string;
 }
 
@@ -27,7 +30,8 @@ export async function submitScore(
   nickname: string,
   score: number,
   level: number,
-  lines: number
+  lines: number,
+  inputMode: InputMode
 ): Promise<{ success: boolean; error?: string }> {
   if (!supabase) {
     return { success: false, error: "Leaderboard not configured" };
@@ -38,6 +42,7 @@ export async function submitScore(
     score,
     level,
     lines,
+    input_mode: inputMode,
   });
 
   if (error) {
@@ -49,17 +54,24 @@ export async function submitScore(
 }
 
 export async function fetchLeaderboard(
+  inputMode?: InputMode,
   limit = 100
 ): Promise<LeaderboardEntry[]> {
   if (!supabase) {
     return [];
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("leaderboard")
     .select("*")
     .order("score", { ascending: false })
     .limit(limit);
+
+  if (inputMode) {
+    query = query.eq("input_mode", inputMode);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Failed to fetch leaderboard:", error);

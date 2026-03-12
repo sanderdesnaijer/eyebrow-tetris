@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchLeaderboard, type LeaderboardEntry } from "@/lib/supabase";
+import { fetchLeaderboard, type LeaderboardEntry, type InputMode } from "@/lib/supabase";
 
 export default function LeaderboardPage() {
-  // Note: metadata is defined in a separate file for client components
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<"score" | "level" | "lines">(
     "score"
   );
+  const [inputModeFilter, setInputModeFilter] = useState<InputMode | 'all'>('eyebrow');
 
   useEffect(() => {
-    fetchLeaderboard(100).then((data) => {
+    setLoading(true);
+    const mode = inputModeFilter === 'all' ? undefined : inputModeFilter;
+    fetchLeaderboard(mode, 100).then((data) => {
       setEntries(data);
       setLoading(false);
     });
-  }, []);
+  }, [inputModeFilter]);
 
   const sortedEntries = [...entries].sort((a, b) => b[sortField] - a[sortField]);
 
@@ -31,9 +33,46 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
+      <h1 className="pixel-font mb-6 text-center text-2xl text-[var(--blue)]">
         LEADERBOARD
       </h1>
+
+      {/* Input Mode Tabs */}
+      <div className="mb-6 flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setInputModeFilter('eyebrow')}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            inputModeFilter === 'eyebrow'
+              ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+              : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
+          }`}
+        >
+          👁️ Eyebrow
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputModeFilter('keyboard')}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            inputModeFilter === 'keyboard'
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+              : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
+          }`}
+        >
+          ⌨️ Keyboard
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputModeFilter('all')}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            inputModeFilter === 'all'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+              : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
+          }`}
+        >
+          All
+        </button>
+      </div>
 
       {loading ? (
         <div className="py-12 text-center text-zinc-400">
@@ -70,6 +109,11 @@ export default function LeaderboardPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
                     Player
                   </th>
+                  {inputModeFilter === 'all' && (
+                    <th className="px-4 py-3 text-center text-sm font-medium text-zinc-400">
+                      Mode
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">
                     Score
                   </th>
@@ -106,6 +150,15 @@ export default function LeaderboardPage() {
                     <td className="px-4 py-3 font-medium text-white">
                       {entry.nickname}
                     </td>
+                    {inputModeFilter === 'all' && (
+                      <td className="px-4 py-3 text-center">
+                        {entry.input_mode === 'eyebrow' ? (
+                          <span className="text-green-400" title="Eyebrow mode">👁️</span>
+                        ) : (
+                          <span className="text-amber-400" title="Keyboard mode">⌨️</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">
                       <span
                         className={
