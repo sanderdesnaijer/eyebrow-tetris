@@ -59,7 +59,13 @@ interface GameScreenProps {
 
 type FaceLandmark = { x: number; y: number; z: number };
 
-const MOUTH_OUTER_INDICES = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
+// Lip contour landmarks that closely follow the actual lip edges
+// Upper outer lip: left corner -> top -> right corner
+const UPPER_OUTER_LIP = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291];
+// Lower outer lip: right corner -> bottom -> left corner (to complete the loop)
+const LOWER_OUTER_LIP = [291, 375, 321, 405, 314, 17, 84, 181, 91, 146, 61];
+// Full mouth outline (closed loop)
+const MOUTH_OUTER_INDICES = [...UPPER_OUTER_LIP, ...LOWER_OUTER_LIP.slice(1)];
 const LEFT_BROW_INDICES = [70, 63, 105, 66, 107];
 const RIGHT_BROW_INDICES = [300, 293, 334, 296, 336];
 
@@ -161,7 +167,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
     if (!faceLandmarks) return;
 
-    const drawLandmarkGroup = (indices: number[], isActive: boolean) => {
+    const drawLandmarkGroup = (indices: number[], isActive: boolean, closePath = false) => {
       const color = isActive ? "#22c55e" : "#ffffff";
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
@@ -180,6 +186,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           }
         }
       });
+      if (closePath) {
+        ctx.closePath();
+      }
       ctx.stroke();
 
       indices.forEach((i) => {
@@ -188,7 +197,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           const x = point.x * canvas.width;
           const y = point.y * canvas.height;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, 2 * Math.PI);
+          ctx.arc(x, y, 2, 0, 2 * Math.PI);
           ctx.fill();
         }
       });
@@ -198,7 +207,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     // side of the screen (user's right brow), and vice versa
     drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
     drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
-    drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen);
+    drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
     
     // Highlight the specific outer brow detection points with larger markers
     const highlightDetectionPoint = (idx: number, isActive: boolean) => {
