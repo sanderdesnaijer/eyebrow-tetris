@@ -97,6 +97,7 @@ export interface TetrisOverlayRef {
   moveRight: () => void;
   rotate: () => void;
   hardDrop: () => void;
+  softDrop: () => void;
   getCurrentPiece: () => TetrisPiece | null;
   getDangerLevel: () => { isInDanger: boolean; dangerLevel: number };
 }
@@ -116,6 +117,8 @@ interface TetrisOverlayProps {
   inputMode: InputMode;
   onGameOver?: (stats: GameStats) => void;
   onLineClear?: (linesCleared: number) => void;
+  onExitFullScreen?: () => void;
+  onPieceLock?: () => void;
 }
 
 function getNextPieceIndex(): number {
@@ -128,6 +131,8 @@ export function TetrisOverlay({
   inputMode,
   onGameOver,
   onLineClear,
+  onExitFullScreen,
+  onPieceLock,
 }: TetrisOverlayProps) {
   const { cellSize, previewCell } = useCellSize();
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
@@ -301,13 +306,16 @@ export function TetrisOverlay({
       onLineClear?.(cleared);
     }
 
+    // Trigger piece lock callback (for sound/visual effects)
+    onPieceLock?.();
+
     setGrid(nextGrid);
     // Spawn the piece that was shown in "Next" preview
     const newPiece = spawn(nextPieceIndex);
     setPiece(newPiece);
     // Generate a new "Next" piece for the preview
     setNextPieceIndex(getNextPieceIndex());
-  }, [mergePiece, clearLines, spawn, level, lines, nextPieceIndex, onLineClear]);
+  }, [mergePiece, clearLines, spawn, level, lines, nextPieceIndex, onLineClear, onPieceLock]);
 
   const move = useCallback(
     (dx: number) => {
@@ -340,6 +348,17 @@ export function TetrisOverlay({
     const dropped = { ...p, y };
     pieceRef.current = dropped;
     lockPiece();
+  }, [collides, lockPiece, gameOver, paused]);
+
+  const softDrop = useCallback(() => {
+    const p = pieceRef.current;
+    if (!p || gameOver || paused) return;
+    const g = gridRef.current;
+    if (collides(g, p.shape, p.x, p.y + 1)) {
+      lockPiece();
+    } else {
+      setPiece({ ...p, y: p.y + 1 });
+    }
   }, [collides, lockPiece, gameOver, paused]);
 
   const tick = useCallback(() => {
@@ -387,6 +406,7 @@ export function TetrisOverlay({
     moveRight: () => move(1),
     rotate,
     hardDrop,
+    softDrop,
     getCurrentPiece: () => pieceRef.current,
     getDangerLevel: () => ({ isInDanger, dangerLevel }),
   }));
@@ -421,6 +441,11 @@ export function TetrisOverlay({
 
   useEffect(() => {
     if (!visible) return;
+    
+    // Track keyboard soft drop state for acceleration
+    let keyboardDownStartTime: number | null = null;
+    let keyboardLastSoftDrop = 0;
+    
     const handler = (e: KeyboardEvent) => {
       if (gameOver) {
         if (e.key === " " || e.key === "Enter") {
@@ -458,13 +483,51 @@ export function TetrisOverlay({
         case "s":
         case "S":
           e.preventDefault();
-          hardDrop();
+          if (!e.repeat) {
+            // First press - do immediate soft drop and start timing
+            keyboardDownStartTime = performance.now();
+            softDrop();
+            keyboardLastSoftDrop = performance.now();
+          }
           break;
       }
     };
+    
+    const keyUpHandler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+        keyboardDownStartTime = null;
+      }
+    };
+    
+    // Interval for continuous soft drops when holding down
+    const softDropTick = () => {
+      if (keyboardDownStartTime !== null && !gameOver && !paused) {
+        const now = performance.now();
+        const holdDuration = now - keyboardDownStartTime;
+        // Start at 300ms interval, decrease to 50ms as hold duration increases
+        const minInterval = 50;
+        const maxInterval = 300;
+        const accelerationTime = 1500; // Full speed after 1.5 seconds
+        const progress = Math.min(holdDuration / accelerationTime, 1);
+        const interval = maxInterval - (maxInterval - minInterval) * progress;
+        
+        if (now - keyboardLastSoftDrop >= interval) {
+          softDrop();
+          keyboardLastSoftDrop = now;
+        }
+      }
+    };
+    
+    const intervalId = setInterval(softDropTick, 16); // ~60fps check
+    
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [visible, gameOver, paused, move, rotate, hardDrop, restart]);
+    window.addEventListener("keyup", keyUpHandler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("keyup", keyUpHandler);
+      clearInterval(intervalId);
+    };
+  }, [visible, gameOver, paused, move, rotate, softDrop, restart]);
 
   if (!visible) return null;
 
@@ -501,24 +564,37 @@ export function TetrisOverlay({
     { cmd: "← Move Left", gesture: "Left Brow Up", icon: "←" },
     { cmd: "Move Right →", gesture: "Right Brow Up", icon: "→" },
     { cmd: "Rotate", gesture: "Both Brows Up", icon: "↻" },
-    { cmd: "↓ Hard Drop", gesture: "Mouth Open", icon: "↓" },
+    { cmd: "↓ Soft Drop", gesture: "Mouth Open", icon: "↓" },
+    { cmd: "⬇ Hard Drop", gesture: "Both Brows + Mouth", icon: "⬇" },
   ] as const;
 
   return (
     <div
       className={`flex flex-col items-center gap-1 rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
     >
-      <div className="flex w-full items-center justify-between">
-        <div className="pixel-font text-[10px] text-accent sm:text-sm">EYEBROW TETRIS</div>
-        {!gameOver && (
+      {/* Pause button above the title */}
+      {!gameOver && (
+        <div className="flex w-full flex-col gap-1">
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
-            className="rounded border border-zinc-500 px-2 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-white"
+            className="w-full rounded border border-zinc-500 px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-white sm:text-xs"
           >
             {paused ? "Resume" : "Pause"}
           </button>
-        )}
+          {paused && onExitFullScreen && (
+            <button
+              type="button"
+              onClick={onExitFullScreen}
+              className="w-full rounded border border-zinc-500 px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-white sm:text-xs"
+            >
+              Exit Full Screen
+            </button>
+          )}
+        </div>
+      )}
+      <div className="flex w-full items-center justify-between">
+        <div className="pixel-font text-[10px] text-accent sm:text-sm">EYEBROW TETRIS</div>
       </div>
       <div className="flex w-full items-start justify-between gap-2 sm:gap-3">
         <div className="flex flex-col gap-0.5 sm:gap-1">
@@ -619,6 +695,7 @@ export function TetrisOverlay({
         <span><span className="text-accent">→</span> R.Brow</span>
         <span><span className="text-accent">↻</span> Both</span>
         <span><span className="text-accent">↓</span> Mouth</span>
+        <span><span className="text-accent">⬇</span> Both+Mouth</span>
       </div>
     </div>
   );

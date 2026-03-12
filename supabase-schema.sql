@@ -1,5 +1,9 @@
 -- Eyebrow Tetris Leaderboard Schema
 -- Run this in your Supabase SQL Editor to set up the database
+--
+-- For existing databases, run this migration to add input_mode:
+-- ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS input_mode text not null default 'eyebrow' check (input_mode in ('eyebrow', 'keyboard'));
+-- CREATE INDEX IF NOT EXISTS leaderboard_input_mode_idx ON leaderboard (input_mode, score desc);
 
 -- Create the leaderboard table
 create table if not exists leaderboard (
@@ -8,8 +12,12 @@ create table if not exists leaderboard (
   score integer not null check (score >= 0),
   level integer not null check (level between 1 and 10),
   lines integer not null check (lines >= 0),
+  input_mode text not null default 'eyebrow' check (input_mode in ('eyebrow', 'keyboard')),
   created_at timestamp with time zone default now()
 );
+
+-- Create index for input_mode filtering
+create index if not exists leaderboard_input_mode_idx on leaderboard (input_mode, score desc);
 
 -- Create index for faster score lookups
 create index if not exists leaderboard_score_idx on leaderboard (score desc);

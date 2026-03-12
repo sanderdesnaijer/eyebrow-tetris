@@ -83,8 +83,6 @@ const NOSE_TIP_IDX = 4;
 const FOREHEAD_IDX = 10;
 
 // Eye landmarks for googly eyes
-const LEFT_EYE_CENTER_IDX = 468; // Left iris center (if available) or use eye landmarks
-const RIGHT_EYE_CENTER_IDX = 473; // Right iris center (if available)
 const LEFT_EYE_TOP_IDX = 159;
 const LEFT_EYE_BOTTOM_IDX = 145;
 const LEFT_EYE_INNER_IDX = 133;
@@ -108,6 +106,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const prevLeftBrowRef = useRef(false);
   const prevRightBrowRef = useRef(false);
   const prevMouthOpenRef = useRef(false);
+
+  // Soft drop timing refs for mouth-based control
+  const mouthOpenStartRef = useRef<number | null>(null);
+  const lastSoftDropRef = useRef<number>(0);
+  const hardDropTriggeredRef = useRef(false);
 
   // Baseline brow positions (established when face is neutral)
   const leftBrowBaselineRef = useRef<number | null>(null);
@@ -152,8 +155,8 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     isInDanger: false,
     dangerLevel: 0,
   });
-  const [inputMode, setInputMode] = useState<InputMode>('eyebrow');
-  const inputModeRef = useRef<InputMode>('eyebrow');
+  const [inputMode, setInputMode] = useState<InputMode>("eyebrow");
+  const inputModeRef = useRef<InputMode>("eyebrow");
   const googlyPupilRef = useRef({
     leftX: 0,
     leftY: 0,
@@ -216,6 +219,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       startTime: Date.now(),
     });
     setTimeout(() => setHardDropReaction(null), 600);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getLineClearText = (lines: number): string => {
@@ -351,14 +355,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     // Next Piece balancing on eyebrows with physics!
     // The piece sits on your brows and reacts to how you raise them
     const nextPiece = tetrisRef.current?.getCurrentPiece?.();
-    
+
     // Get both eyebrow positions
     const leftBrowOuter = faceLandmarks[LEFT_OUTER_BROW_IDX];
     const rightBrowOuter = faceLandmarks[RIGHT_OUTER_BROW_IDX];
     const leftBrowCenter = faceLandmarks[LEFT_BROW_INDICES[2]];
     const rightBrowCenter = faceLandmarks[RIGHT_BROW_INDICES[2]];
 
-    if (leftBrowOuter && rightBrowOuter && leftBrowCenter && rightBrowCenter && nextPiece) {
+    if (
+      leftBrowOuter &&
+      rightBrowOuter &&
+      leftBrowCenter &&
+      rightBrowCenter &&
+      nextPiece
+    ) {
       const physics = browPhysicsRef.current;
       const now = Date.now();
       const dt = Math.min((now - physics.lastTime) / 1000, 0.05);
@@ -371,12 +381,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       // Calculate brow lift velocities (how fast brows are moving)
       const leftLiftVel = (physics.prevLeftY - leftBrowY) / Math.max(dt, 0.001);
-      const rightLiftVel = (physics.prevRightY - rightBrowY) / Math.max(dt, 0.001);
-      
+      const rightLiftVel =
+        (physics.prevRightY - rightBrowY) / Math.max(dt, 0.001);
+
       // Smooth the velocities - more responsive to quick movements
       physics.leftLiftVel = physics.leftLiftVel * 0.5 + leftLiftVel * 0.5;
       physics.rightLiftVel = physics.rightLiftVel * 0.5 + rightLiftVel * 0.5;
-      
+
       physics.prevLeftY = leftBrowY;
       physics.prevRightY = rightBrowY;
 
@@ -393,11 +404,12 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       // Calculate average brow height for vertical bounce
       const avgBrowLift = (physics.leftLiftVel + physics.rightLiftVel) / 2;
-      
+
       // Detect fast movements for wild spinning
-      const combinedVelocity = Math.abs(physics.leftLiftVel) + Math.abs(physics.rightLiftVel);
+      const combinedVelocity =
+        Math.abs(physics.leftLiftVel) + Math.abs(physics.rightLiftVel);
       const velocityThreshold = 2; // Threshold for "fast" movement
-      
+
       if (combinedVelocity > velocityThreshold) {
         physics.spinAccumulator += combinedVelocity * dt * 5;
         if (physics.spinAccumulator > 3) {
@@ -410,16 +422,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       // Physics simulation
       if (physics.isSpinning) {
         // Wild spinning mode!
-        const spinDirection = physics.leftLiftVel > physics.rightLiftVel ? 1 : -1;
+        const spinDirection =
+          physics.leftLiftVel > physics.rightLiftVel ? 1 : -1;
         physics.rotationVel += spinDirection * combinedVelocity * dt * 15;
         physics.rotationVel *= 0.95; // Friction
         physics.rotation += physics.rotationVel * dt;
-        
+
         // Extra wobble during spin
         physics.wobble = Math.sin(now * 0.02) * 0.3;
-        
+
         // Stop spinning when rotation velocity dies down
-        if (Math.abs(physics.rotationVel) < 0.5 && combinedVelocity < velocityThreshold * 0.5) {
+        if (
+          Math.abs(physics.rotationVel) < 0.5 &&
+          combinedVelocity < velocityThreshold * 0.5
+        ) {
           physics.isSpinning = false;
           physics.spinAccumulator = 0;
         }
@@ -428,30 +444,35 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         // Spring physics for rotation
         const rotationSpring = 8;
         const rotationDamping = 0.85;
-        
-        physics.rotationVel += (targetTilt - physics.rotation) * rotationSpring * dt;
+
+        physics.rotationVel +=
+          (targetTilt - physics.rotation) * rotationSpring * dt;
         physics.rotationVel *= rotationDamping;
         physics.rotation += physics.rotationVel;
-        
+
         // Add wobble from fast brow movements
-        physics.wobble = Math.sin(now * 0.015) * Math.min(0.2, combinedVelocity * 0.05);
+        physics.wobble =
+          Math.sin(now * 0.015) * Math.min(0.2, combinedVelocity * 0.05);
       }
 
       // Vertical bounce physics - snappy and bouncy!
       const bounceForce = avgBrowLift * 1200; // Strong bounce from brow velocity
       physics.yVel += bounceForce * dt;
-      physics.yVel += (-physics.yOffset * 45) * dt; // Strong spring for snappy return
+      physics.yVel += -physics.yOffset * 45 * dt; // Strong spring for snappy return
       physics.yVel *= 0.82; // Less damping = bouncier feel
       physics.yOffset += physics.yVel * dt;
       physics.yOffset = Math.max(-60, Math.min(40, physics.yOffset)); // Clamp with more range
 
       // Calculate position between eyebrows
       // Use MediaPipe indices correctly for mirrored video
-      const centerX = ((leftBrowCenter.x + rightBrowCenter.x) / 2) * canvas.width;
-      const centerY = ((leftBrowCenter.y + rightBrowCenter.y) / 2) * canvas.height;
+      const centerX =
+        ((leftBrowCenter.x + rightBrowCenter.x) / 2) * canvas.width;
+      const centerY =
+        ((leftBrowCenter.y + rightBrowCenter.y) / 2) * canvas.height;
 
       // Calculate block size based on face
-      const browDistance = Math.abs(rightBrowCenter.x - leftBrowCenter.x) * canvas.width;
+      const browDistance =
+        Math.abs(rightBrowCenter.x - leftBrowCenter.x) * canvas.width;
       const cellSize = Math.max(12, Math.min(24, browDistance / 5));
 
       // Get the next piece shape and color
@@ -466,7 +487,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       ctx.save();
       ctx.translate(centerX, posY);
-      
+
       // Apply rotation with wobble
       const totalRotation = physics.rotation + physics.wobble;
       ctx.rotate(totalRotation);
@@ -474,16 +495,22 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       // Squash/stretch effect based on vertical velocity for bouncy feel
       const squashStretch = Math.min(Math.abs(physics.yVel) * 0.003, 0.25);
       const isGoingUp = physics.yVel < 0;
-      const scaleX = isGoingUp ? 1 - squashStretch * 0.5 : 1 + squashStretch * 0.6;
-      const scaleY = isGoingUp ? 1 + squashStretch * 0.8 : 1 - squashStretch * 0.5;
+      const scaleX = isGoingUp
+        ? 1 - squashStretch * 0.5
+        : 1 + squashStretch * 0.6;
+      const scaleY = isGoingUp
+        ? 1 + squashStretch * 0.8
+        : 1 - squashStretch * 0.5;
 
       // Scale effect when spinning fast
-      const spinScale = physics.isSpinning ? 1 + Math.abs(physics.rotationVel) * 0.02 : 1;
+      const spinScale = physics.isSpinning
+        ? 1 + Math.abs(physics.rotationVel) * 0.02
+        : 1;
       ctx.scale(scaleX * spinScale, scaleY * spinScale);
 
       // Draw the Tetris piece
       ctx.globalAlpha = physics.isSpinning ? 0.85 : 0.95;
-      
+
       shape.forEach((row, rowIdx) => {
         row.forEach((cell, colIdx) => {
           if (cell) {
@@ -1144,12 +1171,32 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   useEffect(() => {
     if (status !== "ready") return;
 
+    // Track keyboard soft drop state
+    let keyboardDownStartTime: number | null = null;
+    let keyboardLastSoftDrop = 0;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Track if keyboard is used for game controls (switches to keyboard mode)
-      const gameControlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'A', 'd', 'D', 'w', 'W', 's', 'S'];
-      if (gameControlKeys.includes(e.key) && inputModeRef.current === 'eyebrow') {
-        inputModeRef.current = 'keyboard';
-        setInputMode('keyboard');
+      const gameControlKeys = [
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+        "a",
+        "A",
+        "d",
+        "D",
+        "w",
+        "W",
+        "s",
+        "S",
+      ];
+      if (
+        gameControlKeys.includes(e.key) &&
+        inputModeRef.current === "eyebrow"
+      ) {
+        inputModeRef.current = "keyboard";
+        setInputMode("keyboard");
       }
 
       switch (e.key) {
@@ -1172,8 +1219,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         case "ArrowDown":
         case "s":
         case "S":
-          setKeyboardMouthOpen(true);
-          triggerHardDropReaction();
+          if (!e.repeat) {
+            // First press - do immediate soft drop
+            setKeyboardMouthOpen(true);
+            keyboardDownStartTime = performance.now();
+            tetrisRef.current?.softDrop();
+            keyboardLastSoftDrop = performance.now();
+          }
           break;
       }
     };
@@ -1200,9 +1252,31 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         case "s":
         case "S":
           setKeyboardMouthOpen(false);
+          keyboardDownStartTime = null;
           break;
       }
     };
+
+    // Interval for continuous soft drops when holding down
+    const softDropTick = () => {
+      if (keyboardDownStartTime !== null) {
+        const now = performance.now();
+        const holdDuration = now - keyboardDownStartTime;
+        // Start at 300ms interval, decrease to 50ms as hold duration increases
+        const minInterval = 50;
+        const maxInterval = 300;
+        const accelerationTime = 1500; // Full speed after 1.5 seconds
+        const progress = Math.min(holdDuration / accelerationTime, 1);
+        const interval = maxInterval - (maxInterval - minInterval) * progress;
+
+        if (now - keyboardLastSoftDrop >= interval) {
+          tetrisRef.current?.softDrop();
+          keyboardLastSoftDrop = now;
+        }
+      }
+    };
+
+    const intervalId = setInterval(softDropTick, 16); // ~60fps check
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
@@ -1210,8 +1284,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      clearInterval(intervalId);
     };
-  }, [status, triggerHardDropReaction]);
+  }, [status]);
 
   // Poll the danger level from the Tetris game
   useEffect(() => {
@@ -1463,9 +1538,24 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                   // Both brows raised = rotate (only trigger once on transition)
                   const bothBrowsNow = leftBrow && rightBrow;
                   const bothBrowsPrev = prevLeft && prevRight;
+                  const allThreeNow = bothBrowsNow && mouthOpenNow;
+                  const allThreePrev = bothBrowsPrev && prevMouth;
 
-                  if (bothBrowsNow && !bothBrowsPrev) {
-                    // Both brows just raised together - rotate
+                  // Hard drop: both brows raised + mouth open (trigger once when combo is first achieved)
+                  if (
+                    allThreeNow &&
+                    !allThreePrev &&
+                    !hardDropTriggeredRef.current
+                  ) {
+                    hardDropTriggeredRef.current = true;
+                    tetris.hardDrop();
+                  } else if (!allThreeNow) {
+                    // Reset hard drop trigger when combo is broken
+                    hardDropTriggeredRef.current = false;
+                  }
+
+                  // Rotate: both brows raised (without mouth open)
+                  if (bothBrowsNow && !bothBrowsPrev && !mouthOpenNow) {
                     tetris.rotate();
                   } else if (leftBrow && !prevLeft && !rightBrow) {
                     // Only left brow raised (and right is not raised) - move left
@@ -1475,9 +1565,39 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                     tetris.moveRight();
                   }
 
-                  if (mouthOpenNow && !prevMouth) {
-                    tetris.hardDrop();
-                    triggerHardDropReaction();
+                  // Soft drop with acceleration when mouth is held open (but not when doing hard drop)
+                  if (mouthOpenNow && !bothBrowsNow) {
+                    const currentTime = now;
+
+                    if (!prevMouth) {
+                      // Mouth just opened - do first soft drop immediately
+                      mouthOpenStartRef.current = currentTime;
+                      tetris.softDrop();
+                      lastSoftDropRef.current = currentTime;
+                    } else if (mouthOpenStartRef.current !== null) {
+                      // Mouth is being held open - calculate drop interval based on duration
+                      const holdDuration =
+                        currentTime - mouthOpenStartRef.current;
+                      // Start at 300ms interval, decrease to 50ms as hold duration increases
+                      // Acceleration curve: faster drops the longer you hold
+                      const minInterval = 50;
+                      const maxInterval = 300;
+                      const accelerationTime = 1500; // Full speed after 1.5 seconds
+                      const progress = Math.min(
+                        holdDuration / accelerationTime,
+                        1,
+                      );
+                      const interval =
+                        maxInterval - (maxInterval - minInterval) * progress;
+
+                      if (currentTime - lastSoftDropRef.current >= interval) {
+                        tetris.softDrop();
+                        lastSoftDropRef.current = currentTime;
+                      }
+                    }
+                  } else {
+                    // Mouth closed or doing hard drop - reset timing
+                    mouthOpenStartRef.current = null;
                   }
                 }
               } else {
@@ -1573,263 +1693,293 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     >
       <div className="flex h-full w-full max-w-5xl flex-row">
         <div className="relative flex min-h-0 min-w-0 flex-1">
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          autoPlay
-          className={`absolute inset-0 h-full w-full object-cover transition-all duration-100 ${
-            lineClearFlash.active ? "line-clear-flash" : ""
-          }`}
-          style={{
-            transform: "scaleX(-1)",
-            filter: lineClearFlash.active
-              ? `saturate(${2 + lineClearFlash.intensity}) contrast(${1.2 + lineClearFlash.intensity * 0.2}) hue-rotate(${lineClearFlash.intensity * 30}deg) brightness(${1.2 + lineClearFlash.intensity * 0.15})`
-              : undefined,
-            imageRendering: lineClearFlash.active ? "pixelated" : undefined,
-          }}
-        />
-        {lineClearFlash.active && (
-          <>
-            <div
-              className="pointer-events-none absolute inset-0 animate-pulse"
-              style={{
-                background: `linear-gradient(45deg, 
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-100 ${
+              lineClearFlash.active ? "line-clear-flash" : ""
+            }`}
+            style={{
+              transform: "scaleX(-1)",
+              filter: lineClearFlash.active
+                ? `saturate(${2 + lineClearFlash.intensity}) contrast(${1.2 + lineClearFlash.intensity * 0.2}) hue-rotate(${lineClearFlash.intensity * 30}deg) brightness(${1.2 + lineClearFlash.intensity * 0.15})`
+                : undefined,
+              imageRendering: lineClearFlash.active ? "pixelated" : undefined,
+            }}
+          />
+          {lineClearFlash.active && (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 animate-pulse"
+                style={{
+                  background: `linear-gradient(45deg, 
                   rgba(0, 255, 255, ${0.15 * lineClearFlash.intensity}) 0%, 
                   rgba(255, 0, 255, ${0.15 * lineClearFlash.intensity}) 50%, 
                   rgba(255, 255, 0, ${0.15 * lineClearFlash.intensity}) 100%)`,
-                mixBlendMode: "screen",
-              }}
-            />
-            <div className="pointer-events-none absolute right-[15%] top-[10%]">
-              <div
-                className="comic-burst animate-comic-pop"
-                style={{
-                  transform: `scale(${0.8 + lineClearFlash.intensity * 0.15})`,
+                  mixBlendMode: "screen",
                 }}
+              />
+              <div className="pointer-events-none absolute right-[15%] top-[10%]">
+                <div
+                  className="comic-burst animate-comic-pop"
+                  style={{
+                    transform: `scale(${0.8 + lineClearFlash.intensity * 0.15})`,
+                  }}
+                >
+                  <span className="comic-text">
+                    {getLineClearText(lineClearFlash.linesCleared)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+          <canvas
+            ref={canvasRef}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            style={{ transform: "scaleX(-1)" }}
+          />
+
+          {faceLost && status === "ready" && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+              <div className="rounded-lg border border-amber-500/60 bg-black/80 px-6 py-4 text-center">
+                <p className="font-medium text-amber-400">Face not detected</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Position your face in the frame
+                </p>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleExit}
+            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-zinc-500 bg-black/70 px-6 py-3 text-zinc-200 backdrop-blur-sm transition hover:bg-black/90 hover:text-white"
+          >
+            Exit
+          </button>
+        </div>
+
+        <div className="flex w-auto shrink-0 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
+          <TetrisOverlay
+            tetrisRef={tetrisRef}
+            visible={status === "ready"}
+            inputMode={inputMode}
+            onGameOver={onGameOver}
+            onLineClear={handleLineClear}
+            onExitFullScreen={handleExit}
+            onPieceLock={triggerHardDropReaction}
+          />
+
+          {/* Control Feedback Panel */}
+          <div className="flex w-full max-w-[280px] flex-col gap-1 rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-[10px] backdrop-blur-sm sm:gap-1.5 sm:text-xs md:gap-2 md:px-3 md:py-2">
+            <div className="mb-0.5 flex flex-wrap items-center justify-between gap-1 sm:mb-1">
+              <span className="text-[8px] font-medium text-zinc-500 sm:text-[10px]">
+                FEEDBACK
+              </span>
+              <div className="flex flex-wrap gap-1.5 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGooglyEyes(!showGooglyEyes)}
+                  className={`text-[8px] sm:text-[10px] ${showGooglyEyes ? "text-accent" : "text-zinc-400"} hover:text-white`}
+                >
+                  {showGooglyEyes ? "👀" : "👀"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLandmarks(!showLandmarks)}
+                  className={`text-[8px] sm:text-[10px] ${showLandmarks ? "text-accent" : "text-zinc-400"} hover:text-white`}
+                >
+                  ●
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCalibration(!showCalibration)}
+                  className="text-[8px] text-zinc-400 hover:text-white sm:text-[10px]"
+                >
+                  {showCalibration ? "−" : "+"}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+              <div
+                className={`flex items-center gap-1 font-medium ${leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-400"}`}
               >
-                <span className="comic-text">
-                  {getLineClearText(lineClearFlash.linesCleared)}
+                <span
+                  className={
+                    leftBrowRaised || keyboardLeftBrow
+                      ? "text-accent"
+                      : "text-zinc-600"
+                  }
+                >
+                  ←
                 </span>
+                <span className="hidden sm:inline">Left:</span>{" "}
+                {leftBrowRaised || keyboardLeftBrow ? "↑" : "−"}
               </div>
-            </div>
-          </>
-        )}
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          style={{ transform: "scaleX(-1)" }}
-        />
-
-        {faceLost && status === "ready" && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-            <div className="rounded-lg border border-amber-500/60 bg-black/80 px-6 py-4 text-center">
-              <p className="font-medium text-amber-400">Face not detected</p>
-              <p className="mt-1 text-sm text-zinc-400">
-                Position your face in the frame
-              </p>
-            </div>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleExit}
-          className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-zinc-500 bg-black/70 px-6 py-3 text-zinc-200 backdrop-blur-sm transition hover:bg-black/90 hover:text-white"
-        >
-          Exit
-        </button>
-      </div>
-
-      <div className="flex w-auto shrink-0 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
-        <TetrisOverlay
-          tetrisRef={tetrisRef}
-          visible={status === "ready"}
-          inputMode={inputMode}
-          onGameOver={onGameOver}
-          onLineClear={handleLineClear}
-        />
-
-        {/* Control Feedback Panel */}
-        <div className="flex w-full max-w-[280px] flex-col gap-1 rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-[10px] backdrop-blur-sm sm:gap-1.5 sm:text-xs md:gap-2 md:px-3 md:py-2">
-          <div className="mb-0.5 flex flex-wrap items-center justify-between gap-1 sm:mb-1">
-            <span className="text-[8px] font-medium text-zinc-500 sm:text-[10px]">
-              FEEDBACK
-            </span>
-            <div className="flex flex-wrap gap-1.5 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => setShowGooglyEyes(!showGooglyEyes)}
-                className={`text-[8px] sm:text-[10px] ${showGooglyEyes ? "text-accent" : "text-zinc-400"} hover:text-white`}
+              <div
+                className={`flex items-center gap-1 font-medium ${rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-400"}`}
               >
-                {showGooglyEyes ? "👀" : "👀"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowLandmarks(!showLandmarks)}
-                className={`text-[8px] sm:text-[10px] ${showLandmarks ? "text-accent" : "text-zinc-400"} hover:text-white`}
+                <span
+                  className={
+                    rightBrowRaised || keyboardRightBrow
+                      ? "text-accent"
+                      : "text-zinc-600"
+                  }
+                >
+                  →
+                </span>
+                <span className="hidden sm:inline">Right:</span>{" "}
+                {rightBrowRaised || keyboardRightBrow ? "↑" : "−"}
+              </div>
+              <div
+                className={`flex items-center gap-1 font-medium ${mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-400"}`}
               >
-                ●
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCalibration(!showCalibration)}
-                className="text-[8px] text-zinc-400 hover:text-white sm:text-[10px]"
-              >
-                {showCalibration ? "−" : "+"}
-              </button>
+                <span
+                  className={
+                    mouthOpen || keyboardMouthOpen
+                      ? "text-accent"
+                      : "text-zinc-600"
+                  }
+                >
+                  ↓
+                </span>
+                <span className="hidden sm:inline">Mouth:</span>{" "}
+                {mouthOpen || keyboardMouthOpen ? "○" : "−"}
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-            <div
-              className={`flex items-center gap-1 font-medium ${leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-400"}`}
-            >
-              <span className={leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-600"}>←</span>
-              <span className="hidden sm:inline">Left:</span> {leftBrowRaised || keyboardLeftBrow ? "↑" : "−"}
-            </div>
-            <div
-              className={`flex items-center gap-1 font-medium ${rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-400"}`}
-            >
-              <span className={rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-600"}>→</span>
-              <span className="hidden sm:inline">Right:</span> {rightBrowRaised || keyboardRightBrow ? "↑" : "−"}
-            </div>
-            <div
-              className={`flex items-center gap-1 font-medium ${mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-400"}`}
-            >
-              <span className={mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-600"}>↓</span>
-              <span className="hidden sm:inline">Mouth:</span> {mouthOpen || keyboardMouthOpen ? "○" : "−"}
-            </div>
+
+            {showCalibration && (
+              <div className="mt-3 border-t border-zinc-700 pt-3">
+                <div className="mb-2 text-[10px] font-medium text-zinc-500">
+                  LANDMARK-BASED DETECTION (outer brow points)
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-zinc-400">
+                      <span>Your Left Brow (← move left)</span>
+                      <span
+                        className={
+                          landmarkScores.leftBrowLift > BROW_LIFT_THRESHOLD
+                            ? "text-accent"
+                            : ""
+                        }
+                      >
+                        {(landmarkScores.leftBrowLift * 1000).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="h-full bg-accent transition-all duration-75"
+                        style={{
+                          width: `${Math.min(Math.max((landmarkScores.leftBrowLift * 1000) / 30, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-zinc-400">
+                      <span>Your Right Brow (→ move right)</span>
+                      <span
+                        className={
+                          landmarkScores.rightBrowLift > BROW_LIFT_THRESHOLD
+                            ? "text-accent"
+                            : ""
+                        }
+                      >
+                        {(landmarkScores.rightBrowLift * 1000).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="h-full bg-accent transition-all duration-75"
+                        style={{
+                          width: `${Math.min(Math.max((landmarkScores.rightBrowLift * 1000) / 30, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-zinc-400">
+                      <span>Inner brow (↻ rotate)</span>
+                      <span
+                        className={
+                          blendshapeScores.browInnerUp >
+                          EYEBROW_RAISED_THRESHOLD
+                            ? "text-accent"
+                            : ""
+                        }
+                      >
+                        {blendshapeScores.browInnerUp.toFixed(3)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-75"
+                        style={{
+                          width: `${Math.min(blendshapeScores.browInnerUp * 100, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-zinc-400">
+                      <span>Mouth ratio (↓ soft drop)</span>
+                      <span
+                        className={
+                          blendshapeScores.mouthRatio > MOUTH_OPEN_THRESHOLD
+                            ? "text-accent"
+                            : ""
+                        }
+                      >
+                        {blendshapeScores.mouthRatio.toFixed(3)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="h-full bg-orange-500 transition-all duration-75"
+                        style={{
+                          width: `${Math.min((blendshapeScores.mouthRatio * 100) / 0.6, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
+                  <div>
+                    Brow threshold: {BROW_LIFT_THRESHOLD * 1000} (trigger) /{" "}
+                    {BROW_LOWER_THRESHOLD * 1000} (release)
+                  </div>
+                  <div>Mouth threshold: {MOUTH_OPEN_THRESHOLD}</div>
+                  <div>
+                    Baseline: L=
+                    {landmarkScores.leftBrowBaseline !== null
+                      ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1)
+                      : "calibrating..."}{" "}
+                    R=
+                    {landmarkScores.rightBrowBaseline !== null
+                      ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1)
+                      : "calibrating..."}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {showCalibration && (
-            <div className="mt-3 border-t border-zinc-700 pt-3">
-              <div className="mb-2 text-[10px] font-medium text-zinc-500">
-                LANDMARK-BASED DETECTION (outer brow points)
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Your Left Brow (← move left)</span>
-                    <span
-                      className={
-                        landmarkScores.leftBrowLift > BROW_LIFT_THRESHOLD
-                          ? "text-accent"
-                          : ""
-                      }
-                    >
-                      {(landmarkScores.leftBrowLift * 1000).toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full bg-accent transition-all duration-75"
-                      style={{
-                        width: `${Math.min(Math.max((landmarkScores.leftBrowLift * 1000) / 30, 0), 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Your Right Brow (→ move right)</span>
-                    <span
-                      className={
-                        landmarkScores.rightBrowLift > BROW_LIFT_THRESHOLD
-                          ? "text-accent"
-                          : ""
-                      }
-                    >
-                      {(landmarkScores.rightBrowLift * 1000).toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full bg-accent transition-all duration-75"
-                      style={{
-                        width: `${Math.min(Math.max((landmarkScores.rightBrowLift * 1000) / 30, 0), 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Inner brow (↻ rotate)</span>
-                    <span
-                      className={
-                        blendshapeScores.browInnerUp > EYEBROW_RAISED_THRESHOLD
-                          ? "text-accent"
-                          : ""
-                      }
-                    >
-                      {blendshapeScores.browInnerUp.toFixed(3)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full bg-blue-500 transition-all duration-75"
-                      style={{
-                        width: `${Math.min(blendshapeScores.browInnerUp * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Mouth ratio (↓ drop)</span>
-                    <span
-                      className={
-                        blendshapeScores.mouthRatio > MOUTH_OPEN_THRESHOLD
-                          ? "text-accent"
-                          : ""
-                      }
-                    >
-                      {blendshapeScores.mouthRatio.toFixed(3)}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full bg-orange-500 transition-all duration-75"
-                      style={{
-                        width: `${Math.min((blendshapeScores.mouthRatio * 100) / 0.6, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 space-y-1 text-[10px] text-zinc-500">
-                <div>
-                  Brow threshold: {BROW_LIFT_THRESHOLD * 1000} (trigger) /{" "}
-                  {BROW_LOWER_THRESHOLD * 1000} (release)
-                </div>
-                <div>Mouth threshold: {MOUTH_OPEN_THRESHOLD}</div>
-                <div>
-                  Baseline: L=
-                  {landmarkScores.leftBrowBaseline !== null
-                    ? (landmarkScores.leftBrowBaseline * 1000).toFixed(1)
-                    : "calibrating..."}{" "}
-                  R=
-                  {landmarkScores.rightBrowBaseline !== null
-                    ? (landmarkScores.rightBrowBaseline * 1000).toFixed(1)
-                    : "calibrating..."}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Input Mode Indicator */}
+          <div className="w-full max-w-[280px] rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-center backdrop-blur-sm">
+            {inputMode === "eyebrow" ? (
+              <span className="text-[10px] text-green-400 sm:text-xs">
+                👁️ Eyebrow mode — competing for glory!
+              </span>
+            ) : (
+              <span className="text-[10px] text-amber-400 sm:text-xs">
+                ⌨️ Keyboard mode — separate leaderboard
+              </span>
+            )}
+          </div>
         </div>
-
-        {/* Input Mode Indicator */}
-        <div className="w-full max-w-[280px] rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-center backdrop-blur-sm">
-          {inputMode === 'eyebrow' ? (
-            <span className="text-[10px] text-green-400 sm:text-xs">
-              👁️ Eyebrow mode — competing for glory!
-            </span>
-          ) : (
-            <span className="text-[10px] text-amber-400 sm:text-xs">
-              ⌨️ Keyboard mode — separate leaderboard
-            </span>
-          )}
-        </div>
-      </div>
       </div>
 
       {(status === "requesting" || status === "loading") && (

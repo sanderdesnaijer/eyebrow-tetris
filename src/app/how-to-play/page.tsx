@@ -28,9 +28,15 @@ export default function HowToPlayPage() {
     },
     {
       gesture: "Open Mouth",
-      action: "Hard drop",
+      action: "Soft drop",
       icon: "↓",
-      tip: "Open your mouth wide to instantly drop the piece to the bottom",
+      tip: "Open your mouth to drop the piece faster (accelerates the longer you hold)",
+    },
+    {
+      gesture: "Both Brows + Mouth",
+      action: "Hard drop",
+      icon: "⬇",
+      tip: "Raise both eyebrows and open your mouth to instantly drop the piece to the bottom",
     },
   ];
 
@@ -38,7 +44,7 @@ export default function HowToPlayPage() {
     { key: "← / A", action: "Move left" },
     { key: "→ / D", action: "Move right" },
     { key: "↑ / W", action: "Rotate" },
-    { key: "↓ / S", action: "Hard drop" },
+    { key: "↓ / S", action: "Soft drop" },
     { key: "Space / P", action: "Pause game" },
   ];
 

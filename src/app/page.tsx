@@ -60,7 +60,7 @@ export default function HomePage() {
 
           <p className="mb-8 text-lg text-zinc-400">
             Play Tetris using your face! Raise your eyebrows to move pieces left
-            and right, raise both to rotate, and open your mouth to hard drop.
+            and right, raise both to rotate, and open your mouth to drop faster.
           </p>
 
           <div className="mb-12 flex flex-col items-center gap-4">
@@ -96,7 +96,10 @@ export default function HomePage() {
                   Rotate
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">↓</span> Open mouth = Hard drop
+                  <span className="text-accent">↓</span> Open mouth = Soft drop
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-accent">⬇</span> Both brows + mouth = Hard drop
                 </li>
               </ul>
             </div>
