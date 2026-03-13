@@ -1754,7 +1754,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
+        <div className="flex min-w-0 flex-1 flex-col items-stretch justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
           <TetrisOverlay
             tetrisRef={tetrisRef}
             visible={status === "ready"}
@@ -1766,7 +1766,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           />
 
           {/* Control Feedback Panel */}
-          <div className="flex w-full max-w-full flex-col gap-2 rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:max-w-[280px] sm:gap-2.5 sm:text-lg md:max-w-[320px] md:px-5 md:py-4">
+          <div className="flex w-full max-w-full flex-col gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:max-w-[280px] sm:gap-2.5 sm:text-lg md:max-w-[320px] md:px-5 md:py-4">
             <div className="mb-0.5 flex flex-wrap items-center justify-between gap-3 sm:mb-1">
               <span className="text-sm font-medium text-zinc-500 sm:text-base">
                 FEEDBACK

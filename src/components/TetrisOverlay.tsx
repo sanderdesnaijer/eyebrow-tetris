@@ -12,42 +12,26 @@ const COLS = 10;
 const ROWS = 20;
 const HIGH_SCORE_KEY = "eyebrow-tetris-high-score";
 
-function useCellSize() {
-  const [cellSize, setCellSize] = useState(16);
+function usePreviewCell(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [previewCell, setPreviewCell] = useState(10);
 
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
     const updateSize = () => {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // On mobile: tetris panel = tetris width + padding (keep compact). On desktop: ~half viewport.
-      const isNarrow = viewportWidth < 640;
-      const availableWidth = isNarrow
-        ? Math.min(viewportWidth - 32, 140) // cap so panel stays tetris width + padding
-        : viewportWidth * 0.45 - 32; // ~45% on desktop
-      const availableHeight = viewportHeight - 220; // minus header, controls, feedback panel, padding
-
-      const cellFromWidth = Math.floor(availableWidth / COLS);
-      const cellFromHeight = Math.floor(availableHeight / ROWS);
-
-      // Use the smaller of the two to ensure grid fits both dimensions
-      const newCellSize = Math.max(
-        8,
-        Math.min(20, Math.min(cellFromWidth, cellFromHeight)),
-      );
-      setCellSize(newCellSize);
-      setPreviewCell(Math.max(6, Math.floor(newCellSize * 0.625)));
+      const containerWidth = el.clientWidth || 160;
+      const cellApprox = containerWidth / COLS;
+      setPreviewCell(Math.max(6, Math.floor(cellApprox * 0.625)));
     };
 
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => {
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [containerRef]);
 
-  return { cellSize, previewCell };
+  return previewCell;
 }
 
 const PIECES: number[][][] = [
@@ -139,7 +123,8 @@ export function TetrisOverlay({
   onExitFullScreen,
   onPieceLock,
 }: TetrisOverlayProps) {
-  const { cellSize, previewCell } = useCellSize();
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const previewCell = usePreviewCell(gridContainerRef);
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
     Array(ROWS)
       .fill(null)
@@ -587,7 +572,7 @@ export function TetrisOverlay({
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
+      className={`flex w-full max-w-full flex-col items-center gap-1 self-stretch rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
     >
       {/* Pause and Exit buttons above the title */}
       {!gameOver && (
@@ -657,13 +642,13 @@ export function TetrisOverlay({
           </div>
         </div>
       </div>
-      <div
-        className="relative grid gap-px bg-zinc-800 p-1"
-        style={{
-          gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
-          gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
-        }}
-      >
+      <div ref={gridContainerRef} className="w-full self-stretch">
+        <div
+          className="relative grid w-full gap-px bg-zinc-800 p-1"
+          style={{
+            gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          }}
+        >
         {Array.from({ length: ROWS * COLS }, (_, i) => {
           const row = Math.floor(i / COLS);
           const col = i % COLS;
@@ -689,14 +674,14 @@ export function TetrisOverlay({
               key={i}
               className="border border-zinc-700/50"
               style={{
-                width: cellSize,
-                height: cellSize,
+                aspectRatio: "1",
                 backgroundColor: color ?? "transparent",
                 opacity: isGhost ? 0.35 : 1,
               }}
             />
           );
         })}
+        </div>
       </div>
       {gameOver && (
         <div className="mt-2 flex flex-col items-center gap-2">
