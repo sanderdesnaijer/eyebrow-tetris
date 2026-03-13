@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { GameScreen } from "@/components/GameScreen";
 import { ScoreSubmitModal } from "@/components/ScoreSubmitModal";
 import { GameOverModal } from "@/components/GameOverModal";
+import { MeltScreen } from "@/components/MeltScreen";
 import type { GameStats } from "@/components/TetrisOverlay";
 import { checkScoreQualifies } from "@/lib/supabase";
 
@@ -11,7 +12,9 @@ export default function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [showMeltScreen, setShowMeltScreen] = useState(false);
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
+  const pendingQualifiesRef = useRef<boolean | null>(null);
 
   const handlePlay = () => {
     document.body.style.overflow = "hidden";
@@ -21,18 +24,35 @@ export default function HomePage() {
   const handleExit = () => {
     document.body.style.overflow = "";
     setIsPlaying(false);
+    setShowMeltScreen(false);
   };
 
   const handleGameOver = async (stats: GameStats) => {
     setGameStats(stats);
     
-    const qualifies = await checkScoreQualifies(stats.score, stats.inputMode);
+    // If score is 0, skip qualification check and go straight to game over modal
+    if (stats.score === 0) {
+      pendingQualifiesRef.current = false;
+    } else {
+      // Check qualification in advance while showing melt effect
+      const qualifies = await checkScoreQualifies(stats.score, stats.inputMode);
+      pendingQualifiesRef.current = qualifies;
+    }
     
-    if (qualifies) {
+    // Show the melt screen transition
+    setShowMeltScreen(true);
+  };
+
+  const handleMeltComplete = () => {
+    setShowMeltScreen(false);
+    
+    // Now show the appropriate modal
+    if (pendingQualifiesRef.current) {
       setShowScoreModal(true);
     } else {
       setShowGameOverModal(true);
     }
+    pendingQualifiesRef.current = null;
   };
 
   const handleScoreSubmitted = () => {
@@ -48,6 +68,16 @@ export default function HomePage() {
   const handleGameOverModalClose = () => {
     setShowGameOverModal(false);
     setGameStats(null);
+  };
+
+  const handlePlayAgain = () => {
+    setShowGameOverModal(false);
+    setGameStats(null);
+    // Game is still playing, just restart by triggering exit and play
+    setIsPlaying(false);
+    setTimeout(() => {
+      handlePlay();
+    }, 100);
   };
 
   return (
@@ -123,6 +153,10 @@ export default function HomePage() {
         <GameScreen onGameOver={handleGameOver} onExit={handleExit} />
       )}
 
+      {showMeltScreen && (
+        <MeltScreen onComplete={handleMeltComplete} duration={2500} />
+      )}
+
       {showScoreModal && gameStats && (
         <ScoreSubmitModal
           stats={gameStats}
@@ -132,7 +166,11 @@ export default function HomePage() {
       )}
 
       {showGameOverModal && gameStats && (
-        <GameOverModal stats={gameStats} onClose={handleGameOverModalClose} />
+        <GameOverModal 
+          stats={gameStats} 
+          onClose={handleGameOverModalClose} 
+          onPlayAgain={handlePlayAgain}
+        />
       )}
     </>
   );

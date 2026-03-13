@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     "facial expressions",
   ],
   authors: [{ name: "Sander de Snaijer" }],
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "Eyebrow Tetris - Control Tetris with Your Face",
     description:

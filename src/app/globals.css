@@ -332,3 +332,61 @@ h1,
 .animate-sweat-drop {
   animation: sweat-drop 1.2s ease-in-out infinite;
 }
+
+/* Melt screen effect animations */
+@keyframes melt-drip {
+  0% {
+    height: 0;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  100% {
+    height: 120vh;
+    opacity: 1;
+  }
+}
+
+.animate-melt-drip {
+  animation: melt-drip 2s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+@keyframes melt-text-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-50px);
+    filter: blur(20px);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.15) translateY(0);
+    filter: blur(0);
+  }
+  60% {
+    transform: scale(0.95);
+  }
+  80% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes melt-glitch-line {
+  0%, 100% {
+    transform: translateX(0) scaleX(1);
+  }
+  25% {
+    transform: translateX(-5px) scaleX(1.02);
+  }
+  50% {
+    transform: translateX(5px) scaleX(0.98);
+  }
+  75% {
+    transform: translateX(-3px) scaleX(1.01);
+  }
+}

@@ -1687,6 +1687,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   return (
     <div
       ref={containerRef}
+      data-game-screen
       className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[var(--background)] ${
         lineClearFlash.active ? "animate-screen-shake-intense" : ""
       }`}

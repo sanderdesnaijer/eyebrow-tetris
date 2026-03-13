@@ -1,0 +1,26 @@
+{
+  "name": "Eyebrow Tetris",
+  "short_name": "Eyebrow Tetris",
+  "description": "Play Tetris using facial expressions! Raise your eyebrows to move pieces, open your mouth to drop.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "icon-192.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    },
+    {
+      "src": "icon-512.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    },
+    {
+      "src": "apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
