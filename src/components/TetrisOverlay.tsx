@@ -20,17 +20,20 @@ function useCellSize() {
     const updateSize = () => {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+
       // For horizontal split layout, game panel gets roughly half the width
       // Account for padding and ensure grid fits in available space
       const availableWidth = viewportWidth * 0.45 - 32; // ~45% of viewport minus padding
       const availableHeight = viewportHeight - 220; // minus header, controls, feedback panel, padding
-      
+
       const cellFromWidth = Math.floor(availableWidth / COLS);
       const cellFromHeight = Math.floor(availableHeight / ROWS);
-      
+
       // Use the smaller of the two to ensure grid fits both dimensions
-      const newCellSize = Math.max(8, Math.min(20, Math.min(cellFromWidth, cellFromHeight)));
+      const newCellSize = Math.max(
+        8,
+        Math.min(20, Math.min(cellFromWidth, cellFromHeight)),
+      );
       setCellSize(newCellSize);
       setPreviewCell(Math.max(6, Math.floor(newCellSize * 0.625)));
     };
@@ -102,7 +105,7 @@ export interface TetrisOverlayRef {
   getDangerLevel: () => { isInDanger: boolean; dangerLevel: number };
 }
 
-export type InputMode = 'eyebrow' | 'keyboard';
+export type InputMode = "eyebrow" | "keyboard";
 
 export interface GameStats {
   score: number;
@@ -138,7 +141,7 @@ export function TetrisOverlay({
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
     Array(ROWS)
       .fill(null)
-      .map(() => Array(COLS).fill(null))
+      .map(() => Array(COLS).fill(null)),
   );
   const [piece, setPiece] = useState<{
     shape: number[][];
@@ -198,7 +201,7 @@ export function TetrisOverlay({
       g: (number | null)[][],
       p: number[][],
       px: number,
-      py: number
+      py: number,
     ): boolean => {
       for (let dy = 0; dy < p.length; dy++) {
         for (let dx = 0; dx < p[0].length; dx++) {
@@ -212,7 +215,7 @@ export function TetrisOverlay({
       }
       return false;
     },
-    []
+    [],
   );
 
   const rotateShape = (s: number[][]): number[][] => {
@@ -230,7 +233,7 @@ export function TetrisOverlay({
   const mergePiece = useCallback(
     (
       g: (number | null)[][],
-      p: { shape: number[][]; color: number; x: number; y: number }
+      p: { shape: number[][]; color: number; x: number; y: number },
     ) => {
       const next = g.map((row) => [...row]);
       for (let dy = 0; dy < p.shape.length; dy++) {
@@ -246,7 +249,7 @@ export function TetrisOverlay({
       }
       return next;
     },
-    []
+    [],
   );
 
   const clearLines = useCallback(
@@ -267,7 +270,7 @@ export function TetrisOverlay({
       result.push(...filtered);
       return [result, cleared];
     },
-    []
+    [],
   );
 
   const spawn = useCallback(
@@ -280,7 +283,7 @@ export function TetrisOverlay({
       }
       return p;
     },
-    [createPiece, collides]
+    [createPiece, collides],
   );
 
   const lockPiece = useCallback(() => {
@@ -315,7 +318,16 @@ export function TetrisOverlay({
     setPiece(newPiece);
     // Generate a new "Next" piece for the preview
     setNextPieceIndex(getNextPieceIndex());
-  }, [mergePiece, clearLines, spawn, level, lines, nextPieceIndex, onLineClear, onPieceLock]);
+  }, [
+    mergePiece,
+    clearLines,
+    spawn,
+    level,
+    lines,
+    nextPieceIndex,
+    onLineClear,
+    onPieceLock,
+  ]);
 
   const move = useCallback(
     (dx: number) => {
@@ -326,7 +338,7 @@ export function TetrisOverlay({
         setPiece({ ...p, x: p.x + dx });
       }
     },
-    [collides, gameOver, paused]
+    [collides, gameOver, paused],
   );
 
   const rotate = useCallback(() => {
@@ -385,7 +397,7 @@ export function TetrisOverlay({
     setGrid(
       Array(ROWS)
         .fill(null)
-        .map(() => Array(COLS).fill(null))
+        .map(() => Array(COLS).fill(null)),
     );
     setGameOver(false);
     gameOverCalledRef.current = false;
@@ -416,7 +428,7 @@ export function TetrisOverlay({
     setGrid(
       Array(ROWS)
         .fill(null)
-        .map(() => Array(COLS).fill(null))
+        .map(() => Array(COLS).fill(null)),
     );
     setGameOver(false);
     gameOverCalledRef.current = false;
@@ -441,11 +453,11 @@ export function TetrisOverlay({
 
   useEffect(() => {
     if (!visible) return;
-    
+
     // Track keyboard soft drop state for acceleration
     let keyboardDownStartTime: number | null = null;
     let keyboardLastSoftDrop = 0;
-    
+
     const handler = (e: KeyboardEvent) => {
       if (gameOver) {
         if (e.key === " " || e.key === "Enter") {
@@ -492,13 +504,13 @@ export function TetrisOverlay({
           break;
       }
     };
-    
+
     const keyUpHandler = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         keyboardDownStartTime = null;
       }
     };
-    
+
     // Interval for continuous soft drops when holding down
     const softDropTick = () => {
       if (keyboardDownStartTime !== null && !gameOver && !paused) {
@@ -510,16 +522,16 @@ export function TetrisOverlay({
         const accelerationTime = 1500; // Full speed after 1.5 seconds
         const progress = Math.min(holdDuration / accelerationTime, 1);
         const interval = maxInterval - (maxInterval - minInterval) * progress;
-        
+
         if (now - keyboardLastSoftDrop >= interval) {
           softDrop();
           keyboardLastSoftDrop = now;
         }
       }
     };
-    
+
     const intervalId = setInterval(softDropTick, 16); // ~60fps check
-    
+
     window.addEventListener("keydown", handler);
     window.addEventListener("keyup", keyUpHandler);
     return () => {
@@ -536,7 +548,7 @@ export function TetrisOverlay({
     x: number,
     y: number,
     row: number,
-    col: number
+    col: number,
   ) => {
     const dy = row - y;
     const dx = col - x;
@@ -548,7 +560,7 @@ export function TetrisOverlay({
   // Calculate how high the stack is (0 = empty, ROWS = full)
   const getStackHeight = (): number => {
     for (let row = 0; row < ROWS; row++) {
-      if (grid[row].some(cell => cell !== null)) {
+      if (grid[row].some((cell) => cell !== null)) {
         return ROWS - row;
       }
     }
@@ -558,7 +570,10 @@ export function TetrisOverlay({
   const stackHeight = getStackHeight();
   const dangerThreshold = ROWS * 0.6; // 60% of board height = danger zone
   const isInDanger = stackHeight >= dangerThreshold;
-  const dangerLevel = Math.min(1, (stackHeight - dangerThreshold) / (ROWS * 0.3)); // 0-1 scale for intensity
+  const dangerLevel = Math.min(
+    1,
+    (stackHeight - dangerThreshold) / (ROWS * 0.3),
+  ); // 0-1 scale for intensity
 
   const CONTROL_MAPPING = [
     { cmd: "← Move Left", gesture: "Left Brow Up", icon: "←" },
@@ -582,7 +597,7 @@ export function TetrisOverlay({
           >
             {paused ? "Resume" : "Pause"}
           </button>
-          {paused && onExitFullScreen && (
+          {onExitFullScreen && (
             <button
               type="button"
               onClick={onExitFullScreen}
@@ -594,7 +609,9 @@ export function TetrisOverlay({
         </div>
       )}
       <div className="flex w-full items-center justify-between">
-        <div className="pixel-font text-[10px] text-accent sm:text-sm">EYEBROW TETRIS</div>
+        <div className="pixel-font text-[10px] text-accent sm:text-sm">
+          EYEBROW TETRIS
+        </div>
       </div>
       <div className="flex w-full items-start justify-between gap-2 sm:gap-3">
         <div className="flex flex-col gap-0.5 sm:gap-1">
@@ -602,7 +619,9 @@ export function TetrisOverlay({
             Score: {score} · L{level}
           </div>
           {highScore > 0 && (
-            <div className="text-[8px] text-zinc-500 sm:text-[10px]">Best: {highScore}</div>
+            <div className="text-[8px] text-zinc-500 sm:text-[10px]">
+              Best: {highScore}
+            </div>
           )}
         </div>
         <div className="flex flex-col items-center gap-0.5">
@@ -691,11 +710,21 @@ export function TetrisOverlay({
       )}
       {/* Compact controls - always visible */}
       <div className="mt-1 flex w-full flex-wrap justify-center gap-1.5 text-[8px] text-zinc-500 sm:gap-2 sm:text-[9px]">
-        <span><span className="text-accent">←</span> L.Brow</span>
-        <span><span className="text-accent">→</span> R.Brow</span>
-        <span><span className="text-accent">↻</span> Both</span>
-        <span><span className="text-accent">↓</span> Mouth</span>
-        <span><span className="text-accent">⬇</span> Both+Mouth</span>
+        <span>
+          <span className="text-accent">←</span> L.Brow
+        </span>
+        <span>
+          <span className="text-accent">→</span> R.Brow
+        </span>
+        <span>
+          <span className="text-accent">↻</span> Both
+        </span>
+        <span>
+          <span className="text-accent">↓</span> Mouth
+        </span>
+        <span>
+          <span className="text-accent">⬇</span> Both+Mouth
+        </span>
       </div>
     </div>
   );

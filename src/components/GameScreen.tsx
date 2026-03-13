@@ -1752,14 +1752,6 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
               </div>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={handleExit}
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg border border-zinc-500 bg-black/70 px-6 py-3 text-zinc-200 backdrop-blur-sm transition hover:bg-black/90 hover:text-white"
-          >
-            Exit
-          </button>
         </div>
 
         <div className="flex w-auto shrink-0 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">

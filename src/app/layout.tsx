@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Press_Start_2P, Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
 import "./globals.css";
@@ -86,6 +87,46 @@ export default function RootLayout({
       >
         <Navigation />
         <main className="min-h-screen pt-14">{children}</main>
+        <footer className="mt-12 border-t border-white/5 bg-neutral-950 py-12 text-center">
+          <nav className="mb-8 flex flex-wrap justify-center gap-8">
+            <Link
+              href="/how-to-play"
+              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+            >
+              How to Play
+            </Link>
+            <Link
+              href="/privacy"
+              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+            >
+              Privacy Policy
+            </Link>
+            <a
+              href="mailto:sanderdesnaijer@metsander.com?subject=Question%20about%20Eyebrow%20Tetris"
+              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+            >
+              Contact
+            </a>
+          </nav>
+          <p className="text-xs text-neutral-300">
+            © {new Date().getFullYear()} Eyebrow Tetris. All rights reserved.
+          </p>
+          <a
+            href="https://www.sanderdesnaijer.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-4 inline-flex items-center gap-2 text-xs text-neutral-300 transition-colors hover:text-white"
+          >
+            <img
+              src="/logo-sanderdesnaijer.svg"
+              alt="Sander de Snaijer"
+              width={20}
+              height={20}
+              className="opacity-50 transition-opacity group-hover:opacity-75"
+            />
+            Made by Sander de Snaijer
+          </a>
+        </footer>
       </body>
     </html>
   );
