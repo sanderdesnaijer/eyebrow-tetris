@@ -384,12 +384,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       const rightLiftVel =
         (physics.prevRightY - rightBrowY) / Math.max(dt, 0.001);
 
-      // Smooth the velocities - more responsive to quick movements
-      physics.leftLiftVel = physics.leftLiftVel * 0.5 + leftLiftVel * 0.5;
-      physics.rightLiftVel = physics.rightLiftVel * 0.5 + rightLiftVel * 0.5;
+      // Smooth the velocities - favor raw velocity for snappier response
+      physics.leftLiftVel = physics.leftLiftVel * 0.3 + leftLiftVel * 0.7;
+      physics.rightLiftVel = physics.rightLiftVel * 0.3 + rightLiftVel * 0.7;
 
       physics.prevLeftY = leftBrowY;
       physics.prevRightY = rightBrowY;
+
+      // Impulse on sudden brow movement for extra "pop"
+      const velChange =
+        Math.abs(leftLiftVel - physics.leftLiftVel) +
+        Math.abs(rightLiftVel - physics.rightLiftVel);
+      if (velChange > 3) {
+        physics.yVel -= velChange * 8; // Quick upward pop when brows jump
+      }
 
       // Calculate the tilt based on height difference between brows
       const browHeightDiff = (rightBrowY - leftBrowY) * canvas.height;
@@ -441,9 +449,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         }
       } else {
         // Normal balancing mode
-        // Spring physics for rotation
-        const rotationSpring = 8;
-        const rotationDamping = 0.85;
+        // Spring physics for rotation - snappier with more elastic overshoot
+        const rotationSpring = 12;
+        const rotationDamping = 0.75;
 
         physics.rotationVel +=
           (targetTilt - physics.rotation) * rotationSpring * dt;
@@ -455,11 +463,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           Math.sin(now * 0.015) * Math.min(0.2, combinedVelocity * 0.05);
       }
 
-      // Vertical bounce physics - snappy and bouncy!
-      const bounceForce = avgBrowLift * 1200; // Strong bounce from brow velocity
+      // Vertical bounce physics - elastic and jumpy!
+      const bounceForce = avgBrowLift * 2000; // Strong bounce from brow velocity
       physics.yVel += bounceForce * dt;
-      physics.yVel += -physics.yOffset * 45 * dt; // Strong spring for snappy return
-      physics.yVel *= 0.82; // Less damping = bouncier feel
+      physics.yVel += -physics.yOffset * 70 * dt; // Strong spring for snappy return
+      physics.yVel *= 0.72; // Less damping = more overshoot, bouncier feel
       physics.yOffset += physics.yVel * dt;
       physics.yOffset = Math.max(-60, Math.min(40, physics.yOffset)); // Clamp with more range
 
@@ -493,7 +501,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       ctx.rotate(totalRotation);
 
       // Squash/stretch effect based on vertical velocity for bouncy feel
-      const squashStretch = Math.min(Math.abs(physics.yVel) * 0.003, 0.25);
+      const squashStretch = Math.min(Math.abs(physics.yVel) * 0.005, 0.35);
       const isGoingUp = physics.yVel < 0;
       const scaleX = isGoingUp
         ? 1 - squashStretch * 0.5
