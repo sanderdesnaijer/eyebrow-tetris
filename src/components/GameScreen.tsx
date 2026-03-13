@@ -147,7 +147,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     linesCleared: number;
   }>({ active: false, intensity: 1, linesCleared: 0 });
   const [showGooglyEyes, setShowGooglyEyes] = useState(false);
-  const [showLandmarks, setShowLandmarks] = useState(false);
+  const [showLandmarks, setShowLandmarks] = useState(true);
   const [keyboardLeftBrow, setKeyboardLeftBrow] = useState(false);
   const [keyboardRightBrow, setKeyboardRightBrow] = useState(false);
   const [keyboardMouthOpen, setKeyboardMouthOpen] = useState(false);
@@ -1754,7 +1754,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           )}
         </div>
 
-        <div className="flex w-auto shrink-0 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
           <TetrisOverlay
             tetrisRef={tetrisRef}
             visible={status === "ready"}
@@ -1766,30 +1766,30 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           />
 
           {/* Control Feedback Panel */}
-          <div className="flex w-full max-w-[280px] flex-col gap-1 rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-[10px] backdrop-blur-sm sm:gap-1.5 sm:text-xs md:gap-2 md:px-3 md:py-2">
-            <div className="mb-0.5 flex flex-wrap items-center justify-between gap-1 sm:mb-1">
-              <span className="text-[8px] font-medium text-zinc-500 sm:text-[10px]">
+          <div className="flex w-full max-w-full flex-col gap-2 rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:max-w-[280px] sm:gap-2.5 sm:text-lg md:max-w-[320px] md:px-5 md:py-4">
+            <div className="mb-0.5 flex flex-wrap items-center justify-between gap-3 sm:mb-1">
+              <span className="text-sm font-medium text-zinc-500 sm:text-base">
                 FEEDBACK
               </span>
-              <div className="flex flex-wrap gap-1.5 sm:gap-3">
+              <div className="flex flex-wrap gap-2.5 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => setShowGooglyEyes(!showGooglyEyes)}
-                  className={`text-[8px] sm:text-[10px] ${showGooglyEyes ? "text-accent" : "text-zinc-400"} hover:text-white`}
+                  className={`flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border px-4 text-3xl transition-colors sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl ${showGooglyEyes ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
                   {showGooglyEyes ? "👀" : "👀"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowLandmarks(!showLandmarks)}
-                  className={`text-[8px] sm:text-[10px] ${showLandmarks ? "text-accent" : "text-zinc-400"} hover:text-white`}
+                  className={`flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border px-4 text-3xl transition-colors sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl ${showLandmarks ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
                   ●
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCalibration(!showCalibration)}
-                  className="text-[8px] text-zinc-400 hover:text-white sm:text-[10px]"
+                  className="flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border border-zinc-600 bg-zinc-800/80 px-4 text-3xl text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-700 hover:text-white sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl"
                 >
                   {showCalibration ? "−" : "+"}
                 </button>

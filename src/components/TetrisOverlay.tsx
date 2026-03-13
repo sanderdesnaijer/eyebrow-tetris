@@ -21,9 +21,11 @@ function useCellSize() {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // For horizontal split layout, game panel gets roughly half the width
-      // Account for padding and ensure grid fits in available space
-      const availableWidth = viewportWidth * 0.45 - 32; // ~45% of viewport minus padding
+      // On mobile: tetris panel = tetris width + padding (keep compact). On desktop: ~half viewport.
+      const isNarrow = viewportWidth < 640;
+      const availableWidth = isNarrow
+        ? Math.min(viewportWidth - 32, 140) // cap so panel stays tetris width + padding
+        : viewportWidth * 0.45 - 32; // ~45% on desktop
       const availableHeight = viewportHeight - 220; // minus header, controls, feedback panel, padding
 
       const cellFromWidth = Math.floor(availableWidth / COLS);
@@ -587,13 +589,13 @@ export function TetrisOverlay({
     <div
       className={`flex flex-col items-center gap-1 rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
     >
-      {/* Pause button above the title */}
+      {/* Pause and Exit buttons above the title */}
       {!gameOver && (
-        <div className="flex w-full flex-col gap-1">
+        <div className="flex w-full gap-1">
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
-            className="w-full rounded border border-zinc-500 px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-white sm:text-xs"
+            className="flex min-h-[32px] flex-1 items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
           >
             {paused ? "Resume" : "Pause"}
           </button>
@@ -601,9 +603,9 @@ export function TetrisOverlay({
             <button
               type="button"
               onClick={onExitFullScreen}
-              className="w-full rounded border border-zinc-500 px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-white sm:text-xs"
+              className="flex min-h-[32px] flex-1 items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
             >
-              Exit Full Screen
+              Exit
             </button>
           )}
         </div>
@@ -709,7 +711,7 @@ export function TetrisOverlay({
         </div>
       )}
       {/* Compact controls - always visible */}
-      <div className="mt-1 flex w-full flex-wrap justify-center gap-1.5 text-[8px] text-zinc-500 sm:gap-2 sm:text-[9px]">
+      <div className="mt-2 flex w-full flex-wrap justify-center gap-2 text-xs text-zinc-500 sm:gap-3 sm:text-sm">
         <span>
           <span className="text-accent">←</span> L.Brow
         </span>
