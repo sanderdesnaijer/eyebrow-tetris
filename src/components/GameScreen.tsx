@@ -287,11 +287,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       indices: number[],
       isActive: boolean,
       closePath = false,
+      isMouth = false,
     ) => {
-      const color = isActive ? "#22c55e" : "#ffffff";
+      const color = isMouth
+        ? isActive
+          ? "#22c55e"
+          : "rgba(255,61,127,0.4)"
+        : isActive
+          ? "#22c55e"
+          : "rgba(0,229,255,0.35)";
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 4;
 
       ctx.beginPath();
       indices.forEach((i, idx) => {
@@ -310,6 +319,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         ctx.closePath();
       }
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
       indices.forEach((i) => {
         const point = faceLandmarks[i];
@@ -326,9 +336,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     // Note: Video is mirrored, so MediaPipe's LEFT_BROW_INDICES appear on the right
     // side of the screen (user's right brow), and vice versa
     if (showLandmarks) {
-      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
-      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
-      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
+      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised, false, false);
+      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised, false, false);
+      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true, true);
 
       // Highlight the specific outer brow detection points with larger markers
       const highlightDetectionPoint = (idx: number, isActive: boolean) => {
@@ -338,11 +348,14 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           const y = point.y * canvas.height;
           ctx.beginPath();
           ctx.arc(x, y, 6, 0, 2 * Math.PI);
-          ctx.fillStyle = isActive ? "#22c55e" : "#f59e0b";
-          ctx.fill();
-          ctx.strokeStyle = "#000";
+          ctx.fillStyle = isActive ? "#22c55e" : "#FF9A00";
+          ctx.strokeStyle = isActive ? "#22c55e" : "#FF9A00";
           ctx.lineWidth = 1;
+          ctx.shadowColor = isActive ? "#22c55e" : "#FF9A00";
+          ctx.shadowBlur = 3;
+          ctx.fill();
           ctx.stroke();
+          ctx.shadowBlur = 0;
         }
       };
 
@@ -1696,9 +1709,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     <div
       ref={containerRef}
       data-game-screen
-      className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[var(--background)] ${
+      className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden ${
         lineClearFlash.active ? "animate-screen-shake-intense" : ""
       }`}
+      style={{
+        background:
+          "radial-gradient(circle at 50% 30%, #ff7a00 0%, #2b1055 40%, #0a0a0a 100%)",
+      }}
     >
       <div className="flex h-full w-full max-w-5xl flex-row">
         <div className="relative flex min-h-0 min-w-0 flex-1">
@@ -1762,19 +1779,23 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col items-stretch justify-start gap-2 overflow-auto p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
-          <TetrisOverlay
-            tetrisRef={tetrisRef}
-            visible={status === "ready"}
-            inputMode={inputMode}
-            onGameOver={onGameOver}
-            onLineClear={handleLineClear}
-            onExitFullScreen={handleExit}
-            onPieceLock={triggerHardDropReaction}
-          />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start gap-2 overflow-hidden p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4">
+          {/* Tetris - always visible, takes available space and shrinks to fit */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <TetrisOverlay
+              tetrisRef={tetrisRef}
+              visible={status === "ready"}
+              inputMode={inputMode}
+              onGameOver={onGameOver}
+              onLineClear={handleLineClear}
+              onExitFullScreen={handleExit}
+              onPieceLock={triggerHardDropReaction}
+            />
+          </div>
 
-          {/* Control Feedback Panel */}
-          <div className="flex w-full max-w-full flex-col gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:max-w-[280px] sm:gap-2.5 sm:text-lg md:max-w-[320px] md:px-5 md:py-4">
+          {/* Control Feedback Panel - scrolls if needed */}
+          <div className="flex min-h-0 min-w-0 shrink-0 flex-col gap-2 overflow-y-auto">
+            <div className="flex w-full max-w-full flex-col gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:w-[280px] sm:gap-2.5 sm:text-lg md:w-[320px] md:px-5 md:py-4">
             <div className="mb-0.5 flex flex-wrap items-center justify-between gap-3 sm:mb-1">
               <span className="text-sm font-medium text-zinc-500 sm:text-base">
                 FEEDBACK
@@ -1803,9 +1824,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            <div className="flex gap-x-3 gap-y-0.5">
               <div
-                className={`flex items-center gap-1 font-medium ${leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-400"}`}
+                className={`flex w-[4.5rem] items-center gap-1 font-medium sm:w-auto ${leftBrowRaised || keyboardLeftBrow ? "text-accent" : "text-zinc-400"}`}
               >
                 <span
                   className={
@@ -1816,11 +1837,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 >
                   ←
                 </span>
-                <span className="hidden sm:inline">Left:</span>{" "}
-                {leftBrowRaised || keyboardLeftBrow ? "↑" : "−"}
+                <span className="hidden sm:inline">Left:</span>
+                <span className="inline-block w-3 text-center">
+                  {leftBrowRaised || keyboardLeftBrow ? "↑" : "−"}
+                </span>
               </div>
               <div
-                className={`flex items-center gap-1 font-medium ${rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-400"}`}
+                className={`flex w-[4.5rem] items-center gap-1 font-medium sm:w-auto ${rightBrowRaised || keyboardRightBrow ? "text-accent" : "text-zinc-400"}`}
               >
                 <span
                   className={
@@ -1831,11 +1854,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 >
                   →
                 </span>
-                <span className="hidden sm:inline">Right:</span>{" "}
-                {rightBrowRaised || keyboardRightBrow ? "↑" : "−"}
+                <span className="hidden sm:inline">Right:</span>
+                <span className="inline-block w-3 text-center">
+                  {rightBrowRaised || keyboardRightBrow ? "↑" : "−"}
+                </span>
               </div>
               <div
-                className={`flex items-center gap-1 font-medium ${mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-400"}`}
+                className={`flex w-[5rem] items-center gap-1 font-medium sm:w-auto ${mouthOpen || keyboardMouthOpen ? "text-accent" : "text-zinc-400"}`}
               >
                 <span
                   className={
@@ -1846,8 +1871,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 >
                   ↓
                 </span>
-                <span className="hidden sm:inline">Mouth:</span>{" "}
-                {mouthOpen || keyboardMouthOpen ? "○" : "−"}
+                <span className="hidden sm:inline">Mouth:</span>
+                <span className="inline-block w-3 text-center">
+                  {mouthOpen || keyboardMouthOpen ? "○" : "−"}
+                </span>
               </div>
             </div>
 
@@ -1969,7 +1996,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           </div>
 
           {/* Input Mode Indicator */}
-          <div className="w-full max-w-[280px] rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-center backdrop-blur-sm">
+          <div className="w-full self-center rounded-lg border border-zinc-600 bg-black/70 px-2 py-1.5 text-center backdrop-blur-sm sm:w-[280px] md:w-[320px]">
             {inputMode === "eyebrow" ? (
               <span className="text-[10px] text-green-400 sm:text-xs">
                 👁️ Eyebrow mode — competing for glory!
@@ -1980,6 +2007,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
               </span>
             )}
           </div>
+        </div>
         </div>
       </div>
 

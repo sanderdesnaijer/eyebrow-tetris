@@ -91,6 +91,40 @@ h1,
   animation: screen-shake 0.12s ease-in-out;
 }
 
+/* Neon arcade styles */
+.neon-grid {
+  background-image: linear-gradient(
+      rgba(0, 255, 255, 0.08) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: calc(100% / 10) calc(100% / 20);
+}
+
+.tetromino-neon {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tetromino-ghost {
+  /* Hologram ghost - styled inline */
+}
+
+@keyframes neon-flash {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+.neon-line-clear {
+  animation: screen-shake 0.12s ease-in-out, neon-flash 0.2s ease-out;
+}
+
 @keyframes screen-shake-intense {
   0% {
     transform: translate(0, 0) rotate(0deg);

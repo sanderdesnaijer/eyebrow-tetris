@@ -62,14 +62,15 @@ const PIECES: number[][][] = [
   ], // L
 ];
 
+// Neon arcade palette
 export const TETRIS_COLORS = [
-  "#06b6d4", // I - cyan
-  "#eab308", // O - yellow (accent)
-  "#a855f7", // T - purple
-  "#22c55e", // S - green
-  "#ef4444", // Z - red
-  "#3b82f6", // J - blue
-  "#f97316", // L - orange
+  "#00F0FF", // I - cyan
+  "#FFE600", // O - laser yellow
+  "#B000FF", // T - purple neon
+  "#00FF85", // S - neon green
+  "#FF2E63", // Z - hot pink red
+  "#3B6BFF", // J - electric blue
+  "#FF7A00", // L - neon orange
 ];
 
 const COLORS = TETRIS_COLORS;
@@ -572,11 +573,14 @@ export function TetrisOverlay({
 
   return (
     <div
-      className={`flex w-full max-w-full flex-col items-center gap-1 self-stretch rounded-lg border border-zinc-600 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "animate-screen-shake" : ""}`}
+      className={`flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col items-center gap-1 self-stretch rounded-lg border border-cyan-500/30 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "neon-line-clear" : ""}`}
+      style={{
+        boxShadow: "0 0 6px rgba(0,255,255,0.12), 0 0 16px rgba(0,255,255,0.06)",
+      }}
     >
       {/* Pause and Exit buttons above the title */}
       {!gameOver && (
-        <div className="flex w-full gap-1">
+        <div className="flex w-full shrink-0 gap-1">
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
@@ -595,12 +599,18 @@ export function TetrisOverlay({
           )}
         </div>
       )}
-      <div className="flex w-full items-center justify-between">
-        <div className="pixel-font text-[10px] text-accent sm:text-sm">
+      <div className="flex w-full shrink-0 items-center justify-between">
+        <div
+          className="pixel-font text-[10px] sm:text-sm"
+          style={{
+            color: "#ffb84d",
+            textShadow: "0 0 4px rgba(255,184,77,0.6)",
+          }}
+        >
           EYEBROW TETRIS
         </div>
       </div>
-      <div className="flex w-full items-start justify-between gap-2 sm:gap-3">
+      <div className="flex w-full shrink-0 items-start justify-between gap-2 sm:gap-3">
         <div className="flex flex-col gap-0.5 sm:gap-1">
           <div className="score-glow text-[10px] text-zinc-400 sm:text-xs">
             Score: {score} · L{level}
@@ -614,10 +624,11 @@ export function TetrisOverlay({
         <div className="flex flex-col items-center gap-0.5">
           <div className="text-[10px] text-zinc-500">Next</div>
           <div
-            className="flex items-center justify-center bg-zinc-800/80 p-0.5"
+            className="flex items-center justify-center rounded p-0.5"
             style={{
               width: 4 * previewCell + 4,
               height: 2 * previewCell + 2,
+              backgroundColor: "#0f172a",
             }}
           >
             <div
@@ -630,11 +641,14 @@ export function TetrisOverlay({
               {PIECES[nextPieceIndex].flat().map((c, i) => (
                 <div
                   key={i}
-                  className="border border-zinc-700/50"
+                  className="tetromino-neon"
                   style={{
                     width: previewCell,
                     height: previewCell,
                     backgroundColor: c ? COLORS[nextPieceIndex] : "transparent",
+                    boxShadow: c
+                      ? `0 0 2px ${COLORS[nextPieceIndex]}, 0 0 6px ${COLORS[nextPieceIndex]}`
+                      : undefined,
                   }}
                 />
               ))}
@@ -642,11 +656,17 @@ export function TetrisOverlay({
           </div>
         </div>
       </div>
-      <div ref={gridContainerRef} className="w-full self-stretch">
+      <div
+        ref={gridContainerRef}
+        className="flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden"
+      >
         <div
-          className="relative grid w-full gap-px bg-zinc-800 p-1"
+          className="relative grid h-full max-w-full gap-px p-1 neon-grid"
           style={{
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+            gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+            aspectRatio: "1/2",
+            backgroundColor: "#0f172a",
           }}
         >
         {Array.from({ length: ROWS * COLS }, (_, i) => {
@@ -672,11 +692,21 @@ export function TetrisOverlay({
           return (
             <div
               key={i}
-              className="border border-zinc-700/50"
+              className={isGhost ? "tetromino-ghost" : "tetromino-neon"}
               style={{
                 aspectRatio: "1",
-                backgroundColor: color ?? "transparent",
-                opacity: isGhost ? 0.35 : 1,
+                backgroundColor: isGhost
+                  ? "rgba(0,255,255,0.15)"
+                  : color ?? "transparent",
+                opacity: isGhost ? 1 : 1,
+                border: isGhost
+                  ? `1px solid rgba(0,255,255,0.4)`
+                  : undefined,
+                boxShadow: isGhost
+                  ? "0 0 4px rgba(0,255,255,0.4)"
+                  : color
+                    ? `0 0 2px ${color}, 0 0 6px ${color}`
+                    : undefined,
               }}
             />
           );
@@ -684,33 +714,46 @@ export function TetrisOverlay({
         </div>
       </div>
       {gameOver && (
-        <div className="mt-2 flex flex-col items-center gap-2">
-          <div className="pixel-font text-sm text-red-400">GAME OVER</div>
+        <div className="mt-2 flex shrink-0 flex-col items-center gap-2">
+          <div
+            className="pixel-font text-sm"
+            style={{
+              color: "#ff2e63",
+              textShadow: "0 0 4px rgba(255,46,99,0.5)",
+            }}
+          >
+            GAME OVER
+          </div>
           <button
             type="button"
             onClick={restart}
-            className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover"
+            className="rounded-lg px-6 py-2 text-sm font-semibold transition"
+            style={{
+              backgroundColor: "#FFE600",
+              color: "#0a0a0a",
+              boxShadow: "0 0 6px rgba(255,230,0,0.4)",
+            }}
           >
             Play Again
           </button>
         </div>
       )}
       {/* Compact controls - always visible */}
-      <div className="mt-2 flex w-full flex-wrap justify-center gap-2 text-xs text-zinc-500 sm:gap-3 sm:text-sm">
+      <div className="mt-2 flex w-full shrink-0 flex-wrap justify-center gap-2 text-xs text-zinc-500 sm:gap-3 sm:text-sm">
         <span>
-          <span className="text-accent">←</span> L.Brow
+          <span style={{ color: "#00E5FF" }}>←</span> L.Brow
         </span>
         <span>
-          <span className="text-accent">→</span> R.Brow
+          <span style={{ color: "#00E5FF" }}>→</span> R.Brow
         </span>
         <span>
-          <span className="text-accent">↻</span> Both
+          <span style={{ color: "#00E5FF" }}>↻</span> Both
         </span>
         <span>
-          <span className="text-accent">↓</span> Mouth
+          <span style={{ color: "#FF3D7F" }}>↓</span> Mouth
         </span>
         <span>
-          <span className="text-accent">⬇</span> Both+Mouth
+          <span style={{ color: "#FFE600" }}>⬇</span> Both+Mouth
         </span>
       </div>
     </div>
