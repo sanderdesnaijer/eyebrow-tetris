@@ -1214,6 +1214,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         "ArrowRight",
         "ArrowUp",
         "ArrowDown",
+        " ",
         "a",
         "A",
         "d",
@@ -1252,12 +1253,14 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         case "s":
         case "S":
           if (!e.repeat) {
-            // First press - do immediate soft drop
             setKeyboardMouthOpen(true);
             keyboardDownStartTime = performance.now();
             tetrisRef.current?.softDrop();
             keyboardLastSoftDrop = performance.now();
           }
+          break;
+        case " ":
+          tetrisRef.current?.hardDrop();
           break;
       }
     };
@@ -1806,8 +1809,8 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
             />
           </div>
 
-          {/* Control Feedback Panel - scrolls if needed */}
-          <div className="flex min-h-0 min-w-0 shrink-0 flex-col gap-2 overflow-y-auto">
+          {/* Control Feedback Panel - shrinks on small screens */}
+          <div className="flex min-h-0 min-w-0 shrink flex-col gap-2 overflow-y-auto">
             <div className="flex w-full max-w-full flex-col gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:w-[280px] sm:gap-2.5 sm:text-lg md:w-[320px] md:px-5 md:py-4">
             <div className="mb-0.5 flex flex-wrap items-center justify-between gap-3 sm:mb-1">
               <span className="text-sm font-medium text-zinc-500 sm:text-base">

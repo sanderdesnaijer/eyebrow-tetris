@@ -119,7 +119,8 @@ export default function HowToPlayPage() {
     { key: "→ / D", action: "Move right" },
     { key: "↑ / W", action: "Rotate" },
     { key: "↓ / S", action: "Soft drop" },
-    { key: "Space / P", action: "Pause game" },
+    { key: "Space", action: "Hard drop" },
+    { key: "P", action: "Pause game" },
   ];
 
   return (

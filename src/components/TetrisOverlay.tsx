@@ -483,7 +483,7 @@ export function TetrisOverlay({
         onToggleMute();
         return;
       }
-      if (e.key === " " || e.key === "p" || e.key === "P") {
+      if (e.key === "p" || e.key === "P") {
         e.preventDefault();
         setPaused((p) => !p);
         return;
@@ -513,11 +513,14 @@ export function TetrisOverlay({
         case "S":
           e.preventDefault();
           if (!e.repeat) {
-            // First press - do immediate soft drop and start timing
             keyboardDownStartTime = performance.now();
             softDrop();
             keyboardLastSoftDrop = performance.now();
           }
+          break;
+        case " ":
+          e.preventDefault();
+          hardDrop();
           break;
       }
     };
@@ -556,7 +559,7 @@ export function TetrisOverlay({
       window.removeEventListener("keyup", keyUpHandler);
       clearInterval(intervalId);
     };
-  }, [visible, gameOver, paused, move, rotate, softDrop, restart, onToggleMute]);
+  }, [visible, gameOver, paused, move, rotate, softDrop, hardDrop, restart, onToggleMute]);
 
   if (!visible) return null;
 
@@ -597,7 +600,7 @@ export function TetrisOverlay({
     { cmd: "Move Right →", gesture: "Right Brow Up", icon: "→" },
     { cmd: "Rotate", gesture: "Both Brows Up", icon: "↻" },
     { cmd: "↓ Soft Drop", gesture: "Mouth Open", icon: "↓" },
-    { cmd: "⬇ Hard Drop", gesture: "Both Brows + Mouth", icon: "⬇" },
+    { cmd: "⬇ Hard Drop", gesture: "Both Brows + Mouth / Space", icon: "⬇" },
   ] as const;
 
   return (
@@ -708,13 +711,15 @@ export function TetrisOverlay({
       <div
         ref={gridContainerRef}
         className="flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden"
+        style={{ containerType: "size" }}
       >
         <div
-          className="relative grid h-full max-w-full gap-px p-1 neon-grid"
+          className="relative grid gap-px p-1 neon-grid"
           style={{
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
             gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-            aspectRatio: "1/2",
+            width: "min(100cqw, 50cqh)",
+            height: "min(100cqh, 200cqw)",
             backgroundColor: "#0f172a",
           }}
         >
@@ -787,8 +792,8 @@ export function TetrisOverlay({
           </button>
         </div>
       )}
-      {/* Compact controls - always visible */}
-      <div className="mt-2 flex w-full shrink-0 flex-wrap justify-center gap-2 text-xs text-zinc-500 sm:gap-3 sm:text-sm">
+      {/* Compact controls - hidden on small screens to save space */}
+      <div className="mt-2 hidden w-full shrink-0 flex-wrap justify-center gap-2 text-xs text-zinc-500 sm:flex sm:gap-3 sm:text-sm">
         <span>
           <span style={{ color: "#00E5FF" }}>←</span> L.Brow
         </span>
@@ -802,7 +807,7 @@ export function TetrisOverlay({
           <span style={{ color: "#FF3D7F" }}>↓</span> Mouth
         </span>
         <span>
-          <span style={{ color: "#FFE600" }}>⬇</span> Both+Mouth
+          <span style={{ color: "#FFE600" }}>⬇</span> Both+Mouth / Space
         </span>
       </div>
     </div>
