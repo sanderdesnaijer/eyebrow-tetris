@@ -301,15 +301,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       indices: number[],
       isActive: boolean,
       closePath = false,
-      isMouth = false,
     ) => {
-      const color = isMouth
-        ? isActive
-          ? "#22c55e"
-          : "rgba(255,61,127,0.4)"
-        : isActive
-          ? "#22c55e"
-          : "rgba(0,229,255,0.35)";
+      const color = isActive
+        ? "#22c55e"
+        : "rgba(255,255,255,0.6)";
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
@@ -350,9 +345,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     // Note: Video is mirrored, so MediaPipe's LEFT_BROW_INDICES appear on the right
     // side of the screen (user's right brow), and vice versa
     if (showLandmarks) {
-      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised, false, false);
-      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised, false, false);
-      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true, true);
+      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
+      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
+      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
 
       // Highlight the specific outer brow detection points with larger markers
       const highlightDetectionPoint = (idx: number, isActive: boolean) => {
@@ -362,10 +357,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           const y = point.y * canvas.height;
           ctx.beginPath();
           ctx.arc(x, y, 6, 0, 2 * Math.PI);
-          ctx.fillStyle = isActive ? "#22c55e" : "#FF9A00";
-          ctx.strokeStyle = isActive ? "#22c55e" : "#FF9A00";
+          ctx.fillStyle = isActive ? "#22c55e" : "rgba(255,255,255,0.6)";
+          ctx.strokeStyle = isActive ? "#22c55e" : "rgba(255,255,255,0.6)";
           ctx.lineWidth = 1;
-          ctx.shadowColor = isActive ? "#22c55e" : "#FF9A00";
+          ctx.shadowColor = isActive ? "#22c55e" : "rgba(255,255,255,0.6)";
           ctx.shadowBlur = 3;
           ctx.fill();
           ctx.stroke();
@@ -1820,36 +1815,44 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
             />
           </div>
 
-          {/* Control Feedback Panel - shrinks on small screens */}
-          <div className="flex min-h-0 min-w-0 shrink flex-col gap-2 overflow-y-auto">
-            <div className="flex w-full max-w-full flex-col gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-4 py-3 text-base backdrop-blur-sm sm:w-[280px] sm:gap-2.5 sm:text-lg md:w-[320px] md:px-5 md:py-4">
-            <div className="mb-0.5 flex flex-wrap items-center justify-between gap-3 sm:mb-1">
-              <span className="text-sm font-medium text-zinc-500 sm:text-base">
-                FEEDBACK
+          {/* Visual toggles + Feedback Panel */}
+          <div className="flex min-h-0 min-w-0 shrink flex-col gap-1.5 overflow-y-auto">
+            {/* Visual Toggles */}
+            <div className="flex w-full max-w-full items-center justify-between gap-2 self-center rounded-lg border border-zinc-600 bg-black/70 px-3 py-2 backdrop-blur-sm sm:w-[280px] md:w-[320px]">
+              <span className="text-[10px] font-medium uppercase text-zinc-500 sm:text-xs">
+                Visuals
               </span>
-              <div className="flex flex-wrap gap-2.5 sm:gap-4">
+              <div className="flex gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setShowGooglyEyes(!showGooglyEyes)}
-                  className={`flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border px-4 text-3xl transition-colors sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl ${showGooglyEyes ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showGooglyEyes ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
-                  {showGooglyEyes ? "👀" : "👀"}
+                  👀
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowLandmarks(!showLandmarks)}
-                  className={`flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border px-4 text-3xl transition-colors sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl ${showLandmarks ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showLandmarks ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
                   ●
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCalibration(!showCalibration)}
-                  className="flex min-h-[60px] min-w-[60px] items-center justify-center rounded-xl border border-zinc-600 bg-zinc-800/80 px-4 text-3xl text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-700 hover:text-white sm:min-h-[64px] sm:min-w-[64px] sm:text-4xl"
-                >
-                  {showCalibration ? "−" : "+"}
-                </button>
               </div>
+            </div>
+
+            {/* Feedback */}
+            <div className="flex w-full max-w-full flex-col gap-1.5 self-center rounded-lg border border-zinc-600 bg-black/70 px-3 py-2 text-sm backdrop-blur-sm sm:w-[280px] sm:gap-2 sm:text-base md:w-[320px] md:px-4 md:py-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium uppercase text-zinc-500 sm:text-xs">
+                Feedback
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCalibration(!showCalibration)}
+                className={`flex h-6 w-6 items-center justify-center rounded border text-xs leading-none transition-colors sm:h-7 sm:w-7 sm:text-sm ${showCalibration ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-400 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
+              >
+                {showCalibration ? "−" : "+"}
+              </button>
             </div>
             <div className="flex gap-x-3 gap-y-0.5">
               <div

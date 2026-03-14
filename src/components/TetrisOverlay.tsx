@@ -434,7 +434,10 @@ export function TetrisOverlay({
       const dangerThreshold = ROWS * 0.6;
       return {
         isInDanger: stackHeight >= dangerThreshold,
-        dangerLevel: Math.min(1, (stackHeight - dangerThreshold) / (ROWS * 0.3)),
+        dangerLevel: Math.min(
+          1,
+          (stackHeight - dangerThreshold) / (ROWS * 0.3),
+        ),
       };
     },
   }));
@@ -573,7 +576,17 @@ export function TetrisOverlay({
       window.removeEventListener("keyup", keyUpHandler);
       clearInterval(intervalId);
     };
-  }, [visible, gameOver, paused, move, rotate, softDrop, hardDrop, restart, onToggleMute]);
+  }, [
+    visible,
+    gameOver,
+    paused,
+    move,
+    rotate,
+    softDrop,
+    hardDrop,
+    restart,
+    onToggleMute,
+  ]);
 
   if (!visible) return null;
 
@@ -595,7 +608,8 @@ export function TetrisOverlay({
     <div
       className={`flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col items-center gap-1 self-stretch rounded-lg border border-cyan-500/30 bg-black/80 p-2 backdrop-blur-sm sm:gap-2 sm:p-3 ${lineClearFlash ? "neon-line-clear" : ""}`}
       style={{
-        boxShadow: "0 0 6px rgba(0,255,255,0.12), 0 0 16px rgba(0,255,255,0.06)",
+        boxShadow:
+          "0 0 6px rgba(0,255,255,0.12), 0 0 16px rgba(0,255,255,0.06)",
       }}
     >
       {/* Pause, Mute and Exit buttons above the title */}
@@ -615,13 +629,31 @@ export function TetrisOverlay({
             title={muted ? "Unmute (M)" : "Mute (M)"}
           >
             {muted ? (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 sm:h-5 sm:w-5"
+              >
                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                 <line x1="23" y1="9" x2="17" y2="15" />
                 <line x1="17" y1="9" x2="23" y2="15" />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 sm:h-5 sm:w-5"
+              >
                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
@@ -714,48 +746,46 @@ export function TetrisOverlay({
             backgroundColor: "#0f172a",
           }}
         >
-        {Array.from({ length: ROWS * COLS }, (_, i) => {
-          const row = Math.floor(i / COLS);
-          const col = i % COLS;
-          const gridVal = grid[row]?.[col] ?? null;
-          const isGhost =
-            piece &&
-            ghostY > piece.y &&
-            isPieceAt(piece.shape, piece.x, ghostY, row, col) &&
-            gridVal === null;
-          const isPieceCell =
-            piece &&
-            isPieceAt(piece.shape, piece.x, piece.y, row, col) &&
-            !isGhost;
-          const color = isGhost
-            ? COLORS[piece.color]
-            : gridVal !== null
-              ? COLORS[gridVal]
-              : isPieceCell
-                ? COLORS[piece.color]
-                : null;
-          return (
-            <div
-              key={i}
-              className={isGhost ? "tetromino-ghost" : "tetromino-neon"}
-              style={{
-                aspectRatio: "1",
-                backgroundColor: isGhost
-                  ? "rgba(0,255,255,0.15)"
-                  : color ?? "transparent",
-                opacity: isGhost ? 1 : 1,
-                border: isGhost
-                  ? `1px solid rgba(0,255,255,0.4)`
-                  : undefined,
-                boxShadow: isGhost
-                  ? "0 0 4px rgba(0,255,255,0.4)"
-                  : color
-                    ? `0 0 2px ${color}, 0 0 6px ${color}`
-                    : undefined,
-              }}
-            />
-          );
-        })}
+          {Array.from({ length: ROWS * COLS }, (_, i) => {
+            const row = Math.floor(i / COLS);
+            const col = i % COLS;
+            const gridVal = grid[row]?.[col] ?? null;
+            const isGhost =
+              piece &&
+              ghostY > piece.y &&
+              isPieceAt(piece.shape, piece.x, ghostY, row, col) &&
+              gridVal === null;
+            const isPieceCell =
+              piece &&
+              isPieceAt(piece.shape, piece.x, piece.y, row, col) &&
+              !isGhost;
+            const color = isGhost
+              ? COLORS[piece.color]
+              : gridVal !== null
+                ? COLORS[gridVal]
+                : isPieceCell
+                  ? COLORS[piece.color]
+                  : null;
+            return (
+              <div
+                key={i}
+                className={isGhost ? "tetromino-ghost" : "tetromino-neon"}
+                style={{
+                  aspectRatio: "1",
+                  backgroundColor: isGhost
+                    ? "rgba(0,255,255,0.15)"
+                    : (color ?? "transparent"),
+                  opacity: isGhost ? 1 : 1,
+                  border: isGhost ? `1px solid rgba(0,255,255,0.4)` : undefined,
+                  boxShadow: isGhost
+                    ? "0 0 4px rgba(0,255,255,0.4)"
+                    : color
+                      ? `0 0 2px ${color}, 0 0 6px ${color}`
+                      : undefined,
+                }}
+              />
+            );
+          })}
         </div>
       </div>
       {gameOver && (
