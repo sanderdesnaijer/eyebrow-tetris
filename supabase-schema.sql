@@ -1,9 +1,13 @@
 -- Eyebrow Tetris Leaderboard Schema
 -- Run this in your Supabase SQL Editor to set up the database
 --
--- For existing databases, run this migration to add input_mode:
--- ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS input_mode text not null default 'eyebrow' check (input_mode in ('eyebrow', 'keyboard'));
--- CREATE INDEX IF NOT EXISTS leaderboard_input_mode_idx ON leaderboard (input_mode, score desc);
+-- For existing databases, run these migrations:
+-- 1. Add input_mode column:
+--    ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS input_mode text not null default 'eyebrow' check (input_mode in ('eyebrow', 'keyboard'));
+--    CREATE INDEX IF NOT EXISTS leaderboard_input_mode_idx ON leaderboard (input_mode, score desc);
+-- 2. Enforce server-side rate limiting (replace permissive insert policy):
+--    DROP POLICY IF EXISTS "Anyone can insert scores" ON leaderboard;
+--    -- Then run the check_rate_limit function and new policy from below
 
 -- Create the leaderboard table
 create table if not exists leaderboard (
@@ -30,14 +34,7 @@ create policy "Anyone can read leaderboard"
   on leaderboard for select
   using (true);
 
--- Allow anyone to insert scores
--- Note: For production, consider adding rate limiting via Supabase Edge Functions
-create policy "Anyone can insert scores"
-  on leaderboard for insert
-  with check (true);
-
--- Optionally: Add a function to prevent duplicate submissions within a time window
--- This provides server-side rate limiting
+-- Server-side rate limiting function: max 1 insert per nickname per minute
 create or replace function check_rate_limit(p_nickname text)
 returns boolean as $$
 declare
@@ -56,3 +53,8 @@ begin
   return (now() - last_submission) > interval '1 minute';
 end;
 $$ language plpgsql security definer;
+
+-- Allow anyone to insert scores (with server-side rate limiting)
+create policy "Anyone can insert scores"
+  on leaderboard for insert
+  with check (check_rate_limit(nickname));

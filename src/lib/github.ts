@@ -7,8 +7,8 @@ export interface GitHubRelease {
   html_url: string;
 }
 
-const GITHUB_OWNER = "sanderdesnaijer";
-const GITHUB_REPO = "eyebrow-tetris";
+const GITHUB_OWNER = process.env.NEXT_PUBLIC_GITHUB_OWNER || "sanderdesnaijer";
+const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || "eyebrow-tetris";
 
 export async function fetchReleases(): Promise<GitHubRelease[]> {
   try {

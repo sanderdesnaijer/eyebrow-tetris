@@ -46,6 +46,10 @@ export async function submitScore(
   });
 
   if (error) {
+    // RLS policy violation (code 42501) from check_rate_limit = rate limited
+    if (error.code === "42501") {
+      return { success: false, error: "Please wait before submitting another score" };
+    }
     console.error("Failed to submit score:", error);
     return { success: false, error: error.message };
   }
