@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { fetchReleases } from "@/lib/github";
 import { SITE_URL } from "@/lib/constants";
+import { formatDate } from "@/lib/utils";
 import { BreadcrumbJsonLd } from "@/components/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
@@ -38,15 +39,6 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
 };
-
-function formatDate(dateString: string) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 function parseMarkdown(text: string): string {
   if (!text) return "";
@@ -103,7 +95,7 @@ export default async function ChangelogPage() {
                   )}
                 </div>
                 <time className="text-sm text-zinc-500">
-                  {formatDate(release.published_at)}
+                  {formatDate(release.published_at, { year: "numeric", month: "long", day: "numeric" })}
                 </time>
               </div>
 

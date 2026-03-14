@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { GameStats } from "./TetrisOverlay";
+import { GameStatsDisplay } from "./GameStatsDisplay";
 import { submitScore } from "@/lib/supabase";
 
 interface ScoreSubmitModalProps {
@@ -103,19 +104,11 @@ export function ScoreSubmitModal({
           HIGH SCORE!
         </h2>
 
-        <div className="mb-6 space-y-2 text-center">
-          <p className="text-3xl font-bold text-[var(--neon-green)]"
-            style={{ textShadow: "0 0 10px rgba(0, 255, 133, 0.5), 0 0 20px rgba(0, 255, 133, 0.2)" }}
-          >
-            {stats.score.toLocaleString()}
-          </p>
-          <p className="text-sm text-zinc-400">
-            Level {stats.level} · {stats.lines} lines
-          </p>
-          <p className={`text-sm ${stats.inputMode === 'eyebrow' ? 'text-green-400' : 'text-amber-400'}`}>
-            {stats.inputMode === 'eyebrow' ? '👁️ Eyebrow Leaderboard' : '⌨️ Keyboard Leaderboard'}
-          </p>
-        </div>
+        <GameStatsDisplay
+          stats={stats}
+          scoreClassName="text-3xl font-bold text-[var(--neon-green)]"
+          scoreStyle={{ textShadow: "0 0 10px rgba(0, 255, 133, 0.5), 0 0 20px rgba(0, 255, 133, 0.2)" }}
+        />
 
         {submitted ? (
           <div className="py-4 text-center">
@@ -137,10 +130,7 @@ export function ScoreSubmitModal({
                 onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
                 placeholder="YourNickname"
                 maxLength={20}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-3 text-white placeholder-zinc-500 focus:border-[var(--blue)] focus:outline-none"
-                style={{ transition: "border-color 0.2s, box-shadow 0.2s" }}
-                onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 8px rgba(0, 240, 255, 0.2)"; }}
-                onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+                className="neon-input w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-3 text-white placeholder-zinc-500 focus:border-[var(--blue)] focus:outline-none"
                 disabled={isSubmitting}
               />
               <p className="mt-1 text-xs text-zinc-500">
