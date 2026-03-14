@@ -135,6 +135,12 @@ export default function RootLayout({
               How to Play
             </Link>
             <Link
+              href="/credits"
+              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+            >
+              Credits
+            </Link>
+            <Link
               href="/privacy"
               className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
             >

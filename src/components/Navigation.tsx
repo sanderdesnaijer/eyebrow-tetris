@@ -9,6 +9,7 @@ const navLinks = [
   { href: "/how-to-play", label: "How to Play" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/changelog", label: "Changelog" },
+  { href: "/credits", label: "Credits" },
   { href: "/privacy", label: "Privacy" },
 ];
 
