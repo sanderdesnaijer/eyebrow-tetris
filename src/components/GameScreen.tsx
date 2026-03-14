@@ -10,6 +10,7 @@ import {
   TETRIS_COLORS,
 } from "./TetrisOverlay";
 import { TutorialOverlay, hasSeenTutorial } from "./TutorialOverlay";
+import confetti from "canvas-confetti";
 
 const MEDIAPIPE_NOISE_RE = /^\s*(INFO: |[IW]\d{4} |Graph successfully started)/;
 
@@ -149,6 +150,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   }>({ active: false, intensity: 1, linesCleared: 0 });
   const [showGooglyEyes, setShowGooglyEyes] = useState(false);
   const [showLandmarks, setShowLandmarks] = useState(true);
+  const [showClownMode, setShowClownMode] = useState(false);
   const [keyboardLeftBrow, setKeyboardLeftBrow] = useState(false);
   const [keyboardRightBrow, setKeyboardRightBrow] = useState(false);
   const [keyboardMouthOpen, setKeyboardMouthOpen] = useState(false);
@@ -184,6 +186,9 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const faceRotationRef = useRef({ pitch: 0, yaw: 0 });
   const facePosRef = useRef({ x: 0, y: 0, lastX: 0, lastY: 0 });
   const isStartingRef = useRef(false);
+  const showClownModeRef = useRef(false);
+  showClownModeRef.current = showClownMode;
+  const lastMouthViewportRef = useRef<{ x: number; y: number } | null>(null);
 
   // Eyebrow physics state for the "Next Piece" block balancing on brows
   const browPhysicsRef = useRef({
@@ -224,9 +229,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     "SPLAT!",
   ];
 
+  const CLOWN_DROP_WORDS = [
+    "HONK!",
+    "BEEP!",
+    "TOOT!",
+    "SQUEAK!",
+    "WOOO!",
+    "BOING!",
+  ];
+
   const triggerHardDropReaction = useCallback(() => {
-    const word =
-      HARD_DROP_WORDS[Math.floor(Math.random() * HARD_DROP_WORDS.length)];
+    const words = showClownModeRef.current
+      ? CLOWN_DROP_WORDS
+      : HARD_DROP_WORDS;
+    const word = words[Math.floor(Math.random() * words.length)];
     setHardDropReaction({
       active: true,
       word,
@@ -250,6 +266,54 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       () => setLineClearFlash({ active: false, intensity: 1, linesCleared: 0 }),
       800,
     );
+
+    if (showClownModeRef.current) {
+      const mouth = lastMouthViewportRef.current;
+      const origin = mouth
+        ? {
+            x: mouth.x / window.innerWidth,
+            y: mouth.y / window.innerHeight,
+          }
+        : { x: 0.25, y: 0.5 };
+
+      const base = {
+        origin,
+        ticks: 200,
+        gravity: 1.2,
+        colors: [
+          "#ff0000",
+          "#00ff00",
+          "#0000ff",
+          "#ffff00",
+          "#ff00ff",
+          "#00ffff",
+        ],
+      };
+
+      confetti({
+        ...base,
+        particleCount: 80 + linesCleared * 30,
+        spread: 70,
+        startVelocity: 45,
+        decay: 0.9,
+      });
+      confetti({
+        ...base,
+        particleCount: 40 + linesCleared * 15,
+        spread: 110,
+        startVelocity: 35,
+        decay: 0.92,
+        scalar: 0.9,
+      });
+      confetti({
+        ...base,
+        particleCount: 20 + linesCleared * 10,
+        spread: 140,
+        startVelocity: 28,
+        decay: 0.94,
+        scalar: 0.8,
+      });
+    }
   }, []);
 
   const stopEverything = useCallback(() => {
@@ -344,12 +408,195 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
     // Note: Video is mirrored, so MediaPipe's LEFT_BROW_INDICES appear on the right
     // side of the screen (user's right brow), and vice versa
-    if (showLandmarks) {
+    if (showClownMode) {
+      // --- CLOWN MODE FACE VISUALS ---
+
+      const noseTipCl = faceLandmarks[NOSE_TIP_IDX];
+      const foreheadCl = faceLandmarks[FOREHEAD_IDX];
+      const faceHCl =
+        noseTipCl && foreheadCl
+          ? Math.abs(noseTipCl.y - foreheadCl.y) * canvas.height
+          : 100;
+
+      // Thick clown eyebrows (blue by default, green when raised)
+      const drawClownBrow = (indices: number[], isActive: boolean) => {
+        const color = isActive ? "#22c55e" : "#1E90FF";
+        const points: { x: number; y: number }[] = [];
+        for (const i of indices) {
+          const p = faceLandmarks[i];
+          if (p)
+            points.push({
+              x: p.x * canvas.width,
+              y: p.y * canvas.height,
+            });
+        }
+        if (points.length < 2) return;
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = faceHCl * 0.06;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = faceHCl * 0.03;
+
+        const lift = -faceHCl * 0.015;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y + lift);
+        for (let i = 1; i < points.length; i++) {
+          const prev = points[i - 1];
+          const curr = points[i];
+          const cpx = (prev.x + curr.x) / 2;
+          const cpy = (prev.y + curr.y) / 2 + lift;
+          ctx.quadraticCurveTo(prev.x, prev.y + lift, cpx, cpy);
+        }
+        ctx.lineTo(
+          points[points.length - 1].x,
+          points[points.length - 1].y + lift,
+        );
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // MediaPipe left brow = user's right brow (mirrored video)
+      drawClownBrow(LEFT_BROW_INDICES, rightBrowRaised);
+      drawClownBrow(RIGHT_BROW_INDICES, leftBrowRaised);
+
+      // Exaggerated red lips (hollow outline so player's mouth is visible)
+      const mouthCenterCl = faceLandmarks[13];
+      const lowerMouthCl = faceLandmarks[14];
+      if (mouthCenterCl && lowerMouthCl) {
+        const cx =
+          ((mouthCenterCl.x + lowerMouthCl.x) / 2) * canvas.width;
+        const cy =
+          ((mouthCenterCl.y + lowerMouthCl.y) / 2) * canvas.height;
+        const lipScale = 1.3;
+
+        ctx.save();
+        ctx.strokeStyle = "#cc0000";
+        ctx.lineWidth = faceHCl * 0.08;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "#cc0000";
+        ctx.shadowBlur = 4;
+
+        ctx.beginPath();
+        UPPER_OUTER_LIP.forEach((idx, i) => {
+          const p = faceLandmarks[idx];
+          if (!p) return;
+          const x = cx + (p.x * canvas.width - cx) * lipScale;
+          const y = cy + (p.y * canvas.height - cy) * lipScale;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        LOWER_OUTER_LIP.slice(1).forEach((idx) => {
+          const p = faceLandmarks[idx];
+          if (!p) return;
+          const x = cx + (p.x * canvas.width - cx) * lipScale;
+          const y = cy + (p.y * canvas.height - cy) * lipScale;
+          ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+        // Darker inner outline for depth
+        ctx.strokeStyle = "#8b0000";
+        ctx.lineWidth = faceHCl * 0.03;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Red clown nose
+      if (noseTipCl && foreheadCl) {
+        const nx = noseTipCl.x * canvas.width;
+        const ny = noseTipCl.y * canvas.height;
+        const noseRadius = faceHCl * 0.12;
+
+        ctx.save();
+        const grad = ctx.createRadialGradient(
+          nx - noseRadius * 0.2,
+          ny - noseRadius * 0.2,
+          noseRadius * 0.1,
+          nx,
+          ny,
+          noseRadius,
+        );
+        grad.addColorStop(0, "#ff4444");
+        grad.addColorStop(0.7, "#cc0000");
+        grad.addColorStop(1, "#990000");
+
+        ctx.beginPath();
+        ctx.arc(nx, ny, noseRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "#880000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(
+          nx - noseRadius * 0.25,
+          ny - noseRadius * 0.25,
+          noseRadius * 0.3,
+          0,
+          2 * Math.PI,
+        );
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Face paint triangles under eyes
+      const drawFacePaintTriangle = (
+        eyeBottomIdx: number,
+        eyeInnerIdx: number,
+        eyeOuterIdx: number,
+        color: string,
+      ) => {
+        const bottom = faceLandmarks[eyeBottomIdx];
+        const inner = faceLandmarks[eyeInnerIdx];
+        const outer = faceLandmarks[eyeOuterIdx];
+        if (!bottom || !inner || !outer) return;
+
+        const eyeW = Math.abs(outer.x - inner.x) * canvas.width;
+        const bx = bottom.x * canvas.width;
+        const by = bottom.y * canvas.height;
+        const triH = eyeW * 0.8;
+        const triHW = eyeW * 0.3;
+
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(bx - triHW, by + 2);
+        ctx.lineTo(bx + triHW, by + 2);
+        ctx.lineTo(bx, by + triH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      drawFacePaintTriangle(
+        LEFT_EYE_BOTTOM_IDX,
+        LEFT_EYE_INNER_IDX,
+        LEFT_EYE_OUTER_IDX_ALT,
+        "#00E5FF",
+      );
+      drawFacePaintTriangle(
+        RIGHT_EYE_BOTTOM_IDX,
+        RIGHT_EYE_INNER_IDX,
+        RIGHT_EYE_OUTER_IDX_ALT,
+        "#FFE600",
+      );
+    } else if (showLandmarks) {
       drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
       drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
       drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
 
-      // Highlight the specific outer brow detection points with larger markers
       const highlightDetectionPoint = (idx: number, isActive: boolean) => {
         const point = faceLandmarks[idx];
         if (point) {
@@ -368,9 +615,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         }
       };
 
-      // Left outer brow point (appears on right side of mirrored video)
       highlightDetectionPoint(LEFT_OUTER_BROW_IDX, rightBrowRaised);
-      // Right outer brow point (appears on left side of mirrored video)
       highlightDetectionPoint(RIGHT_OUTER_BROW_IDX, leftBrowRaised);
     }
 
@@ -801,8 +1046,129 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       }
     }
 
-    // Draw hard drop reaction bubble from mouth
-    if (hardDropReaction?.active && faceLandmarks) {
+    // Draw hard drop reaction / clown horn from mouth
+    if (hardDropReaction?.active && faceLandmarks && showClownMode) {
+      const mouthCenterH = faceLandmarks[13];
+      const mouthLeftH = faceLandmarks[61];
+      const mouthRightH = faceLandmarks[291];
+
+      if (mouthCenterH && mouthLeftH && mouthRightH) {
+        const mxH = mouthCenterH.x * canvas.width;
+        const myH = mouthCenterH.y * canvas.height;
+        const mwH =
+          Math.abs(mouthRightH.x - mouthLeftH.x) * canvas.width;
+
+        const elapsedH = Date.now() - hardDropReaction.startTime;
+        const progH = Math.min(elapsedH / 600, 1);
+        const scaleH =
+          progH < 0.3
+            ? progH / 0.3
+            : 1 - ((progH - 0.3) / 0.7) * 0.3;
+        const opacH = progH > 0.7 ? 1 - (progH - 0.7) / 0.3 : 1;
+
+        ctx.save();
+        ctx.globalAlpha = opacH;
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+
+        const fmxH = canvas.width - mxH;
+
+        // Party horn body (striped cone from mouth)
+        const hornLen = mwH * 2 * scaleH;
+        const hornAng = -0.15;
+        const hornEX = fmxH + Math.sin(hornAng) * hornLen;
+        const hornEY =
+          myH + Math.cos(hornAng) * hornLen + mwH * 0.3;
+        const sW = mwH * 0.08;
+        const eW = mwH * 0.25;
+        const stripeC = [
+          "#ff0000",
+          "#ffdd00",
+          "#00aa00",
+          "#ff0000",
+          "#ffdd00",
+          "#00aa00",
+        ];
+
+        for (let i = 0; i < stripeC.length; i++) {
+          const t0 = i / stripeC.length;
+          const t1 = (i + 1) / stripeC.length;
+          const x0 = fmxH + (hornEX - fmxH) * t0;
+          const y0 =
+            myH + mwH * 0.2 + (hornEY - myH - mwH * 0.2) * t0;
+          const x1 = fmxH + (hornEX - fmxH) * t1;
+          const y1 =
+            myH + mwH * 0.2 + (hornEY - myH - mwH * 0.2) * t1;
+          const w0 = sW + (eW - sW) * t0;
+          const w1 = sW + (eW - sW) * t1;
+          ctx.beginPath();
+          ctx.moveTo(x0 - w0, y0);
+          ctx.lineTo(x1 - w1, y1);
+          ctx.lineTo(x1 + w1, y1);
+          ctx.lineTo(x0 + w0, y0);
+          ctx.closePath();
+          ctx.fillStyle = stripeC[i];
+          ctx.fill();
+        }
+
+        // Horn outline
+        ctx.beginPath();
+        ctx.moveTo(fmxH - sW, myH + mwH * 0.2);
+        ctx.lineTo(hornEX - eW, hornEY);
+        ctx.lineTo(hornEX + eW, hornEY);
+        ctx.lineTo(fmxH + sW, myH + mwH * 0.2);
+        ctx.closePath();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Flared horn end
+        ctx.beginPath();
+        ctx.ellipse(
+          hornEX,
+          hornEY,
+          eW * 1.5,
+          eW * 0.8,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fillStyle = "#ff6600";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Round bubble with text
+        const bR = mwH * (0.5 + scaleH * 0.15);
+        const bX = hornEX;
+        const bY = hornEY + bR + eW * 0.5;
+
+        ctx.beginPath();
+        ctx.arc(bX, bY, bR, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fill();
+        ctx.strokeStyle = "#ff6600";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(bX, bY, bR * 0.85, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+
+        const fsH = Math.max(10, bR * 0.45);
+        ctx.font = `900 ${fsH}px "Comic Sans MS", "Chalkboard SE", cursive`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#ff0066";
+        ctx.fillText(hardDropReaction.word, bX + 1, bY + 1);
+        ctx.fillStyle = "#000";
+        ctx.fillText(hardDropReaction.word, bX, bY);
+
+        ctx.restore();
+      }
+    } else if (hardDropReaction?.active && faceLandmarks) {
       const mouthCenter = faceLandmarks[13]; // Upper lip center
       const mouthLeft = faceLandmarks[61];
       const mouthRight = faceLandmarks[291];
@@ -1191,6 +1557,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     rightBrowRaised,
     showGooglyEyes,
     showLandmarks,
+    showClownMode,
     stackDanger,
     hardDropReaction,
     keyboardLeftBrow,
@@ -1458,6 +1825,16 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                   );
                   ratio = openDist / Math.max(mouthWidth, 0.001);
                   setMouthOpen(ratio > MOUTH_OPEN_THRESHOLD);
+
+                  const mCenterVp = faceLandmarks[13];
+                  if (mCenterVp && videoRef.current?.parentElement) {
+                    const vpRect =
+                      videoRef.current.parentElement.getBoundingClientRect();
+                    lastMouthViewportRef.current = {
+                      x: vpRect.left + (1 - mCenterVp.x) * vpRect.width,
+                      y: vpRect.top + mCenterVp.y * vpRect.height,
+                    };
+                  }
                 }
 
                 const browOuterUpLeft = getBlendshapeScore(
@@ -1836,6 +2213,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                   className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showLandmarks ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
                   ●
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowClownMode(!showClownMode)}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showClownMode ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
+                >
+                  🤡
                 </button>
               </div>
             </div>
