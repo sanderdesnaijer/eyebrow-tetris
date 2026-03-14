@@ -85,59 +85,70 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-4 py-12">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="pixel-font mb-6 text-2xl leading-relaxed text-[var(--blue)] md:text-3xl">
-            EYEBROW TETRIS
-          </h1>
+      <h1 className="pixel-font mx-auto mt-8 mb-4 text-center text-2xl leading-relaxed text-[var(--blue)] md:text-3xl">
+        EYEBROW TETRIS
+      </h1>
+      <div className="relative mx-auto mb-12 w-full max-w-2xl overflow-hidden rounded-2xl border border-[var(--blue)]/15"
+        style={{ boxShadow: "0 0 30px rgba(0, 240, 255, 0.08), 0 0 60px rgba(176, 0, 255, 0.04)" }}
+      >
+        <Image
+          src="/og-image.webp"
+          alt="Eyebrow Tetris — play Tetris with your face"
+          width={1200}
+          height={630}
+          className="block w-full"
+          priority
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+          <button
+            type="button"
+            onClick={handlePlay}
+            className="animate-pulse-glow rounded-xl bg-accent px-12 py-5 text-xl font-bold text-accent-foreground transition hover:bg-accent-hover"
+            style={{ boxShadow: "0 0 15px rgba(255, 46, 99, 0.4), 0 0 40px rgba(255, 46, 99, 0.15)" }}
+          >
+            Play Now
+          </button>
+          <p className="mt-3 text-sm font-medium text-white drop-shadow-md">
+            Requires camera access for face detection
+          </p>
+        </div>
+      </div>
 
-          <p className="mb-8 text-lg text-zinc-400">
+      <div className="px-4 pb-12">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="mb-8 text-lg text-zinc-300">
             Play Tetris using your face! Raise your eyebrows to move pieces left
             and right, raise both to rotate, and open your mouth to drop faster.
           </p>
 
-          <div className="mb-12 flex flex-col items-center gap-4">
-            <button
-              type="button"
-              onClick={handlePlay}
-              className="animate-pulse-glow rounded-xl bg-accent px-12 py-5 text-xl font-bold text-accent-foreground transition hover:bg-accent-hover"
-            >
-              Play Now
-            </button>
-
-            <p className="text-sm text-zinc-500">
-              Requires camera access for face detection
-            </p>
-          </div>
-
           <div className="grid gap-6 text-left md:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6">
+            <div className="neon-card rounded-lg p-6">
               <h3 className="mb-3 text-lg font-semibold text-[var(--accent)]">
                 Controls
               </h3>
               <ul className="space-y-2 text-sm text-zinc-400">
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">←</span> Left eyebrow up = Move
+                  <span className="text-[var(--neon-green)]">←</span> Left eyebrow up = Move
                   left
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">→</span> Right eyebrow up = Move
+                  <span className="text-[var(--neon-green)]">→</span> Right eyebrow up = Move
                   right
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">↻</span> Both eyebrows up =
+                  <span className="text-[var(--neon-purple)]">↻</span> Both eyebrows up =
                   Rotate
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">↓</span> Open mouth = Soft drop
+                  <span className="text-[var(--neon-yellow)]">↓</span> Open mouth = Soft drop
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-accent">⬇</span> Both brows + mouth = Hard drop
+                  <span className="text-[var(--neon-orange)]">⬇</span> Both brows + mouth = Hard drop
                 </li>
               </ul>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6">
+            <div className="neon-card rounded-lg p-6">
               <h3 className="mb-3 text-lg font-semibold text-[var(--accent)]">
                 Tips
               </h3>
@@ -149,7 +160,7 @@ export default function HomePage() {
                   •{" "}
                   <Link
                     href="/how-to-play"
-                    className="text-[var(--accent)] hover:underline"
+                    className="text-[var(--blue)] hover:underline"
                   >
                     See all controls
                   </Link>{" "}
@@ -174,14 +185,14 @@ export default function HomePage() {
               New to the game?{" "}
               <Link
                 href="/how-to-play"
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--blue)] hover:underline"
               >
                 Learn how to play
               </Link>{" "}
               or check out the{" "}
               <Link
                 href="/leaderboard"
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--blue)] hover:underline"
               >
                 leaderboard
               </Link>{" "}
@@ -204,7 +215,7 @@ export default function HomePage() {
               href="https://pugshunt.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group block overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-[var(--accent)]/40 hover:bg-zinc-900/80"
+              className="neon-card group block overflow-hidden rounded-lg transition-colors"
             >
               <Image
                 src="/banner-pugshunt.webp"

@@ -18,11 +18,11 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed left-0 right-0 top-0 z-40 border-b border-zinc-800 bg-[var(--background)]/95 backdrop-blur-sm">
+    <nav className="fixed left-0 right-0 top-0 z-40 border-b border-[var(--blue)]/10 bg-[var(--background)]/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/"
-          className="pixel-font text-sm text-[var(--blue)] transition hover:text-[var(--accent)]"
+          className="neon-text-cyan pixel-font text-sm text-[var(--blue)] transition hover:text-[var(--accent)]"
         >
           EYEBROW TETRIS
         </Link>
@@ -35,8 +35,8 @@ export function Navigation() {
               href={link.href}
               className={`text-sm transition ${
                 pathname === link.href
-                  ? "text-[var(--accent)]"
-                  : "text-zinc-400 hover:text-white"
+                  ? "neon-text-pink text-[var(--accent)]"
+                  : "text-zinc-400 hover:text-[var(--blue)]"
               }`}
             >
               {link.label}
@@ -48,7 +48,7 @@ export function Navigation() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex h-8 w-8 items-center justify-center text-zinc-400 hover:text-white md:hidden"
+          className="flex h-8 w-8 items-center justify-center text-zinc-400 hover:text-[var(--blue)] md:hidden"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? (
@@ -85,7 +85,7 @@ export function Navigation() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="border-t border-zinc-800 bg-[var(--background)] md:hidden">
+        <div className="border-t border-[var(--blue)]/10 bg-[var(--background)] md:hidden">
           <div className="flex flex-col px-4 py-2">
             {navLinks.map((link) => (
               <Link
@@ -94,8 +94,8 @@ export function Navigation() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`py-3 text-sm transition ${
                   pathname === link.href
-                    ? "text-[var(--accent)]"
-                    : "text-zinc-400 hover:text-white"
+                    ? "neon-text-pink text-[var(--accent)]"
+                    : "text-zinc-400 hover:text-[var(--blue)]"
                 }`}
               >
                 {link.label}

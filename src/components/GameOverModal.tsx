@@ -13,13 +13,15 @@ export function GameOverModal({ stats, onClose, onPlayAgain }: GameOverModalProp
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6">
-        <h2 className="pixel-font mb-4 text-center text-lg text-[var(--blue)]">
+      <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--blue)]/20 bg-[#0c0c1e] p-6"
+        style={{ boxShadow: "0 0 30px rgba(0, 240, 255, 0.08), 0 0 60px rgba(176, 0, 255, 0.04)" }}
+      >
+        <h2 className="neon-text-cyan pixel-font mb-4 text-center text-lg text-[var(--blue)]">
           GAME OVER
         </h2>
 
         <div className="mb-6 space-y-2 text-center">
-          <p className="text-3xl font-bold text-[var(--accent)]">
+          <p className="neon-text-pink text-3xl font-bold text-[var(--accent)]">
             {stats.score.toLocaleString()}
           </p>
           <p className="text-sm text-zinc-400">
@@ -43,7 +45,7 @@ export function GameOverModal({ stats, onClose, onPlayAgain }: GameOverModalProp
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-3 font-semibold text-zinc-200 transition hover:bg-zinc-700"
+              className="flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-3 font-semibold text-zinc-200 transition hover:border-[var(--blue)]/30 hover:bg-zinc-700"
             >
               Exit
             </button>

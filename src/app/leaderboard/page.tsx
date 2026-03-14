@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="pixel-font mb-6 text-center text-2xl text-[var(--blue)]">
+      <h1 className="neon-text-cyan pixel-font mb-6 text-center text-2xl text-[var(--blue)]">
         LEADERBOARD
       </h1>
 
@@ -83,7 +83,7 @@ export default function LeaderboardPage() {
       </div>
 
       <noscript>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 text-center">
+        <div className="neon-card rounded-lg p-6 text-center">
           <p className="text-zinc-400">
             The Eyebrow Tetris leaderboard shows the top scores from players
             around the world. Rankings are available for both eyebrow (face
@@ -98,7 +98,7 @@ export default function LeaderboardPage() {
           Loading leaderboard...
         </div>
       ) : entries.length === 0 ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 py-12 text-center">
+        <div className="neon-card rounded-lg py-12 text-center">
           <p className="text-zinc-400">No scores yet. Be the first to play!</p>
         </div>
       ) : (
@@ -110,7 +110,7 @@ export default function LeaderboardPage() {
               onChange={(e) =>
                 setSortField(e.target.value as "score" | "level" | "lines")
               }
-              className="rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-white focus:border-[var(--accent)] focus:outline-none"
+              className="rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-white focus:border-[var(--blue)] focus:outline-none"
             >
               <option value="score">Score</option>
               <option value="level">Level</option>
@@ -118,10 +118,10 @@ export default function LeaderboardPage() {
             </select>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-zinc-800">
+          <div className="neon-card overflow-x-auto rounded-lg">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                <tr className="border-b border-[var(--blue)]/10 bg-[rgba(10,10,30,0.8)]">
                   <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
                     Rank
                   </th>
@@ -151,8 +151,8 @@ export default function LeaderboardPage() {
                 {sortedEntries.map((entry, index) => (
                   <tr
                     key={entry.id}
-                    className={`border-b border-zinc-800/50 ${
-                      index < 3 ? "bg-zinc-900/40" : ""
+                    className={`border-b border-[var(--blue)]/5 ${
+                      index < 3 ? "bg-[rgba(0,240,255,0.03)]" : ""
                     }`}
                   >
                     <td className="px-4 py-3">

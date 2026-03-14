@@ -90,7 +90,7 @@ export default function CreditsPage() {
     <>
       <BreadcrumbJsonLd items={[{ name: "Credits", path: "/credits" }]} />
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="pixel-font mb-8 text-2xl text-[var(--blue)]">
+        <h1 className="neon-text-cyan pixel-font mb-8 text-2xl text-[var(--blue)]">
           CREDITS
         </h1>
 
@@ -99,7 +99,7 @@ export default function CreditsPage() {
             <h2 className="mb-4 text-xl font-semibold text-[var(--accent)]">
               Created by
             </h2>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-5 py-4">
+            <div className="neon-card rounded-lg px-5 py-4">
               <p className="font-medium text-zinc-200">Sander de Snaijer</p>
               <p className="mt-1 text-sm text-zinc-400">
                 Design, development &amp; gameplay by{" "}

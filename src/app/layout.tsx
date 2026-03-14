@@ -85,7 +85,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b82f6",
+  themeColor: "#0a0a14",
 };
 
 export default function RootLayout({
@@ -127,41 +127,41 @@ export default function RootLayout({
         />
         <Navigation />
         <main className="min-h-screen pt-14">{children}</main>
-        <footer className="mt-12 border-t border-white/5 bg-neutral-950 py-12 text-center">
+        <footer className="mt-12 border-t border-[var(--blue)]/10 bg-[#06060f] py-12 text-center">
           <nav className="mb-8 flex flex-wrap justify-center gap-8">
             <Link
               href="/how-to-play"
-              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
             >
               How to Play
             </Link>
             <Link
               href="/credits"
-              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
             >
               Credits
             </Link>
             <Link
               href="/privacy"
-              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
             >
               Privacy Policy
             </Link>
             <a
               href="mailto:sanderdesnaijer@metsander.com?subject=Question%20about%20Eyebrow%20Tetris"
-              className="text-sm uppercase tracking-widest text-neutral-300 transition-colors hover:text-white"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
             >
               Contact
             </a>
           </nav>
-          <p className="text-xs text-neutral-300">
+          <p className="text-xs text-zinc-500">
             © {new Date().getFullYear()} Eyebrow Tetris. All rights reserved.
           </p>
           <a
             href="https://www.sanderdesnaijer.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group mt-4 inline-flex items-center gap-2 text-xs text-neutral-300 transition-colors hover:text-white"
+            className="group mt-4 inline-flex items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-[var(--blue)]"
           >
             <Image
               src="/logo-sanderdesnaijer.svg"

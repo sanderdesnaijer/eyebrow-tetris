@@ -1,20 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0a0a14;
+  --foreground: #e0e0ff;
 
-  --accent: #e4a95d;
-  --accent-hover: #f0bc7a;
-  --accent-foreground: #0a0a0a;
-  --accent-muted: #f5d4a8;
-  --accent-subtle: #f9e6cc;
-  --accent-dark: #3d2a0f;
-  --accent-glow: rgba(228, 169, 93, 0.5);
+  --accent: #FF2E63;
+  --accent-hover: #ff5c8a;
+  --accent-foreground: #ffffff;
+  --accent-muted: #ff6b8f;
+  --accent-subtle: #ff9db5;
+  --accent-dark: #4a0d1f;
+  --accent-glow: rgba(255, 46, 99, 0.5);
 
-  --blue: #50e9f5;
-  --blue-hover: #4f9fa5;
-  --blue-foreground: #0a0a0a;
+  --blue: #00F0FF;
+  --blue-hover: #33f4ff;
+  --blue-foreground: #0a0a14;
+
+  --neon-green: #00FF85;
+  --neon-purple: #B000FF;
+  --neon-yellow: #FFE600;
+  --neon-orange: #FF7A00;
 }
 
 @theme inline {
@@ -29,12 +34,20 @@
   --color-blue: var(--blue);
   --color-blue-hover: var(--blue-hover);
   --color-blue-foreground: var(--blue-foreground);
+  --color-neon-green: var(--neon-green);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-yellow: var(--neon-yellow);
+  --color-neon-orange: var(--neon-orange);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(176, 0, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 240, 255, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 46, 99, 0.04) 0%, transparent 40%);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   overflow-x: clip;
@@ -42,11 +55,18 @@ body {
 
 h1 {
   color: var(--blue);
+  text-shadow:
+    0 0 7px rgba(0, 240, 255, 0.6),
+    0 0 20px rgba(0, 240, 255, 0.3),
+    0 0 40px rgba(0, 240, 255, 0.15);
 }
 
 h2,
 h3 {
   color: var(--accent);
+  text-shadow:
+    0 0 7px rgba(255, 46, 99, 0.4),
+    0 0 20px rgba(255, 46, 99, 0.15);
 }
 
 html {
@@ -65,6 +85,67 @@ h1,
   text-shadow:
     0 0 4px rgba(255, 255, 255, 0.4),
     0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.neon-text-cyan {
+  text-shadow:
+    0 0 7px rgba(0, 240, 255, 0.7),
+    0 0 20px rgba(0, 240, 255, 0.4),
+    0 0 40px rgba(0, 240, 255, 0.2);
+}
+
+.neon-text-pink {
+  text-shadow:
+    0 0 7px rgba(255, 46, 99, 0.7),
+    0 0 20px rgba(255, 46, 99, 0.4),
+    0 0 40px rgba(255, 46, 99, 0.2);
+}
+
+.neon-text-purple {
+  text-shadow:
+    0 0 7px rgba(176, 0, 255, 0.7),
+    0 0 20px rgba(176, 0, 255, 0.4),
+    0 0 40px rgba(176, 0, 255, 0.2);
+}
+
+.neon-border {
+  border-color: rgba(0, 240, 255, 0.2);
+  box-shadow:
+    0 0 6px rgba(0, 240, 255, 0.08),
+    inset 0 0 6px rgba(0, 240, 255, 0.03);
+}
+
+.neon-border-pink {
+  border-color: rgba(255, 46, 99, 0.25);
+  box-shadow:
+    0 0 6px rgba(255, 46, 99, 0.08),
+    inset 0 0 6px rgba(255, 46, 99, 0.03);
+}
+
+.neon-card {
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  background: rgba(10, 10, 30, 0.6);
+  box-shadow:
+    0 0 8px rgba(0, 240, 255, 0.05),
+    inset 0 1px 0 rgba(0, 240, 255, 0.06);
+}
+
+.neon-card:hover {
+  border-color: rgba(0, 240, 255, 0.25);
+  box-shadow:
+    0 0 12px rgba(0, 240, 255, 0.1),
+    inset 0 1px 0 rgba(0, 240, 255, 0.08);
+}
+
+.scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
 }
 
 @keyframes screen-shake {

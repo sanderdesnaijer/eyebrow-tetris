@@ -71,12 +71,12 @@ export default async function ChangelogPage() {
     <>
       <BreadcrumbJsonLd items={[{ name: "Changelog", path: "/changelog" }]} />
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
+        <h1 className="neon-text-cyan pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
           CHANGELOG
         </h1>
 
       {releases.length === 0 ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 py-12 text-center">
+        <div className="neon-card rounded-lg py-12 text-center">
           <p className="text-zinc-400">No releases yet.</p>
           <p className="mt-2 text-sm text-zinc-500">
             Check back later for version history.
@@ -87,7 +87,7 @@ export default async function ChangelogPage() {
           {releases.map((release, index) => (
             <article
               key={release.id}
-              className={`rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 ${
+              className={`neon-card rounded-lg p-6 ${
                 index === 0 ? "ring-1 ring-[var(--accent)]/20" : ""
               }`}
             >
@@ -124,7 +124,7 @@ export default async function ChangelogPage() {
                 <p className="text-sm text-zinc-500">No release notes.</p>
               )}
 
-              <div className="mt-4 border-t border-zinc-800 pt-4">
+              <div className="mt-4 border-t border-[var(--blue)]/10 pt-4">
                 <a
                   href={release.html_url}
                   target="_blank"

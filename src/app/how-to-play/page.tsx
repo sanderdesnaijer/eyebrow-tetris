@@ -131,7 +131,7 @@ export default function HowToPlayPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <div className="mx-auto max-w-4xl px-4 py-12">
-        <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
+        <h1 className="neon-text-cyan pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
           HOW TO PLAY
         </h1>
 
@@ -149,7 +149,7 @@ export default function HowToPlayPage() {
             {controls.map((control) => (
               <div
                 key={control.gesture}
-                className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5"
+                className="neon-card rounded-lg p-5"
               >
                 <div className="mb-3 flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-xl text-[var(--accent)]">
@@ -177,10 +177,10 @@ export default function HowToPlayPage() {
             controls:
           </p>
 
-          <div className="overflow-x-auto rounded-lg border border-zinc-800">
+          <div className="neon-card overflow-x-auto rounded-lg">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                <tr className="border-b border-[var(--blue)]/10 bg-[rgba(10,10,30,0.8)]">
                   <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
                     Key
                   </th>
@@ -193,7 +193,7 @@ export default function HowToPlayPage() {
                 {keyboardControls.map((control) => (
                   <tr
                     key={control.key}
-                    className="border-b border-zinc-800/50"
+                    className="border-b border-[var(--blue)]/5"
                   >
                     <td className="px-4 py-3">
                       <code className="rounded bg-zinc-800 px-2 py-1 text-sm text-[var(--accent)]">
@@ -214,7 +214,7 @@ export default function HowToPlayPage() {
           </h2>
 
           <div className="space-y-4">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="neon-card rounded-lg p-5">
               <h3 className="mb-2 font-medium text-white">
                 1. Good Lighting
               </h3>
@@ -225,7 +225,7 @@ export default function HowToPlayPage() {
               </p>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="neon-card rounded-lg p-5">
               <h3 className="mb-2 font-medium text-white">
                 2. Face the Camera
               </h3>
@@ -236,7 +236,7 @@ export default function HowToPlayPage() {
               </p>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="neon-card rounded-lg p-5">
               <h3 className="mb-2 font-medium text-white">
                 3. Exaggerate Movements
               </h3>
@@ -247,7 +247,7 @@ export default function HowToPlayPage() {
               </p>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="neon-card rounded-lg p-5">
               <h3 className="mb-2 font-medium text-white">
                 4. Watch the Feedback
               </h3>
@@ -257,7 +257,7 @@ export default function HowToPlayPage() {
               </p>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="neon-card rounded-lg p-5">
               <h3 className="mb-2 font-medium text-white">
                 5. Practice Individual Eyebrows
               </h3>
@@ -274,7 +274,7 @@ export default function HowToPlayPage() {
           <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
             Scoring
           </h2>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+          <div className="neon-card rounded-lg p-5">
             <ul className="space-y-3 text-zinc-400">
               <li className="flex items-start gap-3">
                 <span className="text-[var(--accent)]">•</span>
@@ -305,12 +305,12 @@ export default function HowToPlayPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 text-center">
+        <section className="neon-card rounded-lg p-6 text-center">
           <p className="text-zinc-400">
             Ready to compete? Check the{" "}
             <Link
               href="/leaderboard"
-              className="text-[var(--accent)] hover:underline"
+              className="text-[var(--blue)] hover:underline"
             >
               leaderboard
             </Link>{" "}

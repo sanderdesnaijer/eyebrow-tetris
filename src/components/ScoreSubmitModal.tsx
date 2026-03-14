@@ -96,13 +96,17 @@ export function ScoreSubmitModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6">
-        <h2 className="pixel-font mb-4 text-center text-lg text-[var(--blue)]">
-          GAME OVER
+      <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--neon-green)]/20 bg-[#0c0c1e] p-6"
+        style={{ boxShadow: "0 0 30px rgba(0, 255, 133, 0.06), 0 0 60px rgba(0, 240, 255, 0.03)" }}
+      >
+        <h2 className="neon-text-cyan pixel-font mb-4 text-center text-lg text-[var(--blue)]">
+          HIGH SCORE!
         </h2>
 
         <div className="mb-6 space-y-2 text-center">
-          <p className="text-3xl font-bold text-[var(--accent)]">
+          <p className="text-3xl font-bold text-[var(--neon-green)]"
+            style={{ textShadow: "0 0 10px rgba(0, 255, 133, 0.5), 0 0 20px rgba(0, 255, 133, 0.2)" }}
+          >
             {stats.score.toLocaleString()}
           </p>
           <p className="text-sm text-zinc-400">
@@ -133,7 +137,10 @@ export function ScoreSubmitModal({
                 onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
                 placeholder="YourNickname"
                 maxLength={20}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 focus:border-[var(--accent)] focus:outline-none"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-3 text-white placeholder-zinc-500 focus:border-[var(--blue)] focus:outline-none"
+                style={{ transition: "border-color 0.2s, box-shadow 0.2s" }}
+                onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 8px rgba(0, 240, 255, 0.2)"; }}
+                onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
                 disabled={isSubmitting}
               />
               <p className="mt-1 text-xs text-zinc-500">
@@ -147,7 +154,7 @@ export function ScoreSubmitModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 rounded-lg border border-zinc-600 px-4 py-3 text-zinc-300 transition hover:bg-zinc-800"
+                className="flex-1 rounded-lg border border-zinc-600 px-4 py-3 text-zinc-300 transition hover:border-[var(--blue)]/30 hover:bg-zinc-800"
                 disabled={isSubmitting}
               >
                 Skip
