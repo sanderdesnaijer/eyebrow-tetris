@@ -843,7 +843,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           const x = point.x * canvas.width;
           const y = point.y * canvas.height;
           ctx.beginPath();
-          ctx.arc(x, y, 6, 0, 2 * Math.PI);
+          ctx.arc(x, y, 2, 0, 2 * Math.PI);
           ctx.fillStyle = isActive ? "#22c55e" : "rgba(255,255,255,0.6)";
           ctx.strokeStyle = isActive ? "#22c55e" : "rgba(255,255,255,0.6)";
           ctx.lineWidth = 1;
