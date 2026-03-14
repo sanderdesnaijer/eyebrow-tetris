@@ -5,13 +5,13 @@
 A free, browser-based Tetris game powered by AI webcam face detection. No download needed.
 
 <p align="center">
-  <a href="https://sanderdesnaijer.github.io/eyebrow-tetris">
+  <a href="https://eyebrow-tetris.sanderdesnaijer.com">
     <img src="public/og-image.png" alt="Eyebrow Tetris — face-controlled Tetris game using webcam" width="600" />
   </a>
 </p>
 
 <p align="center">
-  <a href="https://sanderdesnaijer.github.io/eyebrow-tetris"><strong>Play Now</strong></a>
+  <a href="https://eyebrow-tetris.sanderdesnaijer.com"><strong>Play Now</strong></a>
 </p>
 
 ## Controls
@@ -106,7 +106,7 @@ Uses [Conventional Commits](https://www.conventionalcommits.org/) with automatic
 
 ## Privacy
 
-Camera data is processed entirely in the browser. No video is ever sent to any server. Only leaderboard data (nickname + score) is stored. See the [Privacy Policy](https://sanderdesnaijer.github.io/eyebrow-tetris/privacy).
+Camera data is processed entirely in the browser. No video is ever sent to any server. Only leaderboard data (nickname + score) is stored. See the [Privacy Policy](https://eyebrow-tetris.sanderdesnaijer.com/privacy).
 
 ## License
 

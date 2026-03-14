@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:https": "next dev --experimental-https",
     "build": "next build",
-    "start": "mkdir -p out/eyebrow-tetris && ln -sf ../_next out/eyebrow-tetris/_next 2>/dev/null || true && npx serve@latest out -l 3000",
+    "start": "npx serve@latest out -l 3000",
     "lint": "eslint"
   },
   "dependencies": {
