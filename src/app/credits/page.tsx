@@ -107,7 +107,7 @@ export default function CreditsPage() {
                   href="https://www.sanderdesnaijer.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--accent)] hover:underline"
+                  className="text-[var(--blue)] hover:underline"
                 >
                   sanderdesnaijer.com
                 </a>
@@ -123,7 +123,7 @@ export default function CreditsPage() {
               {soundCredits.map((credit) => (
                 <div
                   key={credit.label}
-                  className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-5 py-4"
+                  className="neon-card rounded-lg px-5 py-4"
                 >
                   <p className="font-medium text-zinc-200">{credit.label}</p>
                   <p className="mt-1 text-sm text-zinc-400">
@@ -132,7 +132,7 @@ export default function CreditsPage() {
                       href={credit.authorUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-[var(--blue)] hover:underline"
                     >
                       {credit.author}
                     </a>{" "}
@@ -141,7 +141,7 @@ export default function CreditsPage() {
                       href={credit.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-[var(--blue)] hover:underline"
                     >
                       Pixabay
                     </a>
@@ -159,7 +159,7 @@ export default function CreditsPage() {
               {musicCredits.map((credit) => (
                 <div
                   key={credit.label}
-                  className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-5 py-4"
+                  className="neon-card rounded-lg px-5 py-4"
                 >
                   <p className="font-medium text-zinc-200">{credit.label}</p>
                   <p className="mt-1 text-sm text-zinc-400">
@@ -168,7 +168,7 @@ export default function CreditsPage() {
                       href={credit.authorUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-[var(--blue)] hover:underline"
                     >
                       {credit.author}
                     </a>{" "}
@@ -177,7 +177,7 @@ export default function CreditsPage() {
                       href={credit.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-[var(--blue)] hover:underline"
                     >
                       Pixabay
                     </a>
@@ -200,7 +200,7 @@ export default function CreditsPage() {
                     href="https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--accent)] hover:underline"
+                    className="text-[var(--blue)] hover:underline"
                   >
                     Google MediaPipe
                   </a>
@@ -214,7 +214,7 @@ export default function CreditsPage() {
                     href="https://nextjs.org"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--accent)] hover:underline"
+                    className="text-[var(--blue)] hover:underline"
                   >
                     Next.js
                   </a>
@@ -223,14 +223,14 @@ export default function CreditsPage() {
             </div>
           </section>
 
-          <section className="border-t border-zinc-800 pt-6">
+          <section className="border-t border-[var(--blue)]/10 pt-6">
             <p className="text-sm text-zinc-500">
               All audio is licensed under the{" "}
               <a
                 href="https://pixabay.com/service/license-summary/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--blue)] hover:underline"
               >
                 Pixabay Content License
               </a>

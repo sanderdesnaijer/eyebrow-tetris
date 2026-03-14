@@ -43,7 +43,7 @@ export function LatestRelease() {
   return (
     <Link
       href="/changelog"
-      className="group flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]/40 hover:bg-zinc-900/80"
+      className="neon-card group flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-colors"
     >
       <span className="rounded-full bg-[var(--accent)]/10 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
         {release.tag_name}

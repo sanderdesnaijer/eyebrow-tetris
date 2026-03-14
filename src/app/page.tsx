@@ -123,9 +123,9 @@ export default function HomePage() {
 
           <div className="grid gap-6 text-left md:grid-cols-2">
             <div className="neon-card rounded-lg p-6">
-              <h3 className="mb-3 text-lg font-semibold text-[var(--accent)]">
+              <h2 className="mb-3 text-lg font-semibold text-[var(--accent)]">
                 Controls
-              </h3>
+              </h2>
               <ul className="space-y-2 text-sm text-zinc-400">
                 <li className="flex items-center gap-2">
                   <span className="text-[var(--neon-green)]">←</span> Left eyebrow up = Move
@@ -149,9 +149,9 @@ export default function HomePage() {
             </div>
 
             <div className="neon-card rounded-lg p-6">
-              <h3 className="mb-3 text-lg font-semibold text-[var(--accent)]">
+              <h2 className="mb-3 text-lg font-semibold text-[var(--accent)]">
                 Tips
-              </h3>
+              </h2>
               <ul className="space-y-2 text-sm text-zinc-400">
                 <li>• Good lighting helps detection</li>
                 <li>• Face the camera directly</li>

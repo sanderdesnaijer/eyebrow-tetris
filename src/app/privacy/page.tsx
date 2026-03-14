@@ -43,7 +43,7 @@ export default function PrivacyPage() {
     <>
       <BreadcrumbJsonLd items={[{ name: "Privacy Policy", path: "/privacy" }]} />
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="pixel-font mb-8 text-2xl text-[var(--blue)]">
+        <h1 className="neon-text-cyan pixel-font mb-8 text-2xl text-[var(--blue)]">
           PRIVACY POLICY
         </h1>
 
@@ -127,7 +127,7 @@ export default function PrivacyPage() {
                   href="https://supabase.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--accent)] hover:underline"
+                  className="text-[var(--blue)] hover:underline"
                 >
                   supabase.com/privacy
                 </a>
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
                   href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--accent)] hover:underline"
+                  className="text-[var(--blue)] hover:underline"
                 >
                   GitHub&apos;s Privacy Statement
                 </a>
@@ -172,7 +172,7 @@ export default function PrivacyPage() {
               href="https://github.com/sanderdesnaijer/eyebrow-tetris"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--accent)] hover:underline"
+              className="text-[var(--blue)] hover:underline"
             >
               GitHub repository
             </a>
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="border-t border-zinc-800 pt-6">
+        <section className="border-t border-[var(--blue)]/10 pt-6">
           <p className="text-sm text-zinc-500">Last updated: March 2026</p>
         </section>
       </div>

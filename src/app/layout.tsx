@@ -154,14 +154,14 @@ export default function RootLayout({
               Contact
             </a>
           </nav>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             © {new Date().getFullYear()} Eyebrow Tetris. All rights reserved.
           </p>
           <a
             href="https://www.sanderdesnaijer.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group mt-4 inline-flex items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-[var(--blue)]"
+            className="group mt-4 inline-flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-[var(--blue)]"
           >
             <Image
               src="/logo-sanderdesnaijer.svg"
