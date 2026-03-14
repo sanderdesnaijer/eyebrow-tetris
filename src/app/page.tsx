@@ -85,9 +85,14 @@ export default function HomePage() {
 
   return (
     <>
-      <h1 className="pixel-font mx-auto mt-8 mb-4 text-center text-2xl leading-relaxed text-[var(--blue)] md:text-3xl">
+      <h1 className="pixel-font mx-auto mt-8 mb-2 text-center text-2xl leading-relaxed text-[var(--blue)] md:text-3xl">
         EYEBROW TETRIS
       </h1>
+      <p className="mx-auto mb-6 max-w-md text-center text-sm leading-relaxed text-zinc-400 italic md:text-base">
+        &ldquo;Accessibility is important.
+        <br />
+        So I made the least accessible game possible.&rdquo;
+      </p>
       <div className="relative mx-auto mb-12 w-full max-w-2xl overflow-hidden rounded-2xl border border-[var(--blue)]/15"
         style={{ boxShadow: "0 0 30px rgba(0, 240, 255, 0.08), 0 0 60px rgba(176, 0, 255, 0.04)" }}
       >
