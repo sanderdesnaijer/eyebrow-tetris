@@ -151,6 +151,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const [showGooglyEyes, setShowGooglyEyes] = useState(false);
   const [showLandmarks, setShowLandmarks] = useState(true);
   const [showClownMode, setShowClownMode] = useState(false);
+  const [showMoustacheMode, setShowMoustacheMode] = useState(false);
   const [keyboardLeftBrow, setKeyboardLeftBrow] = useState(false);
   const [keyboardRightBrow, setKeyboardRightBrow] = useState(false);
   const [keyboardMouthOpen, setKeyboardMouthOpen] = useState(false);
@@ -188,6 +189,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   const isStartingRef = useRef(false);
   const showClownModeRef = useRef(false);
   showClownModeRef.current = showClownMode;
+  const showMoustacheModeRef = useRef(false);
+  showMoustacheModeRef.current = showMoustacheMode;
+  const moustacheWiggleRef = useRef({ active: false, startTime: 0 });
+  const moustacheCurlRef = useRef({ active: false, startTime: 0 });
+  const moustacheFlapRef = useRef({ active: false, startTime: 0 });
   const lastMouthViewportRef = useRef<{ x: number; y: number } | null>(null);
 
   // Eyebrow physics state for the "Next Piece" block balancing on brows
@@ -238,18 +244,44 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     "BOING!",
   ];
 
+  const MOUSTACHE_DROP_WORDS = [
+    "PUFF!",
+    "POOF!",
+    "HMMM!",
+    "INDEED!",
+    "QUITE!",
+    "BRAVO!",
+  ];
+
   const triggerHardDropReaction = useCallback(() => {
     const words = showClownModeRef.current
       ? CLOWN_DROP_WORDS
-      : HARD_DROP_WORDS;
+      : showMoustacheModeRef.current
+        ? MOUSTACHE_DROP_WORDS
+        : HARD_DROP_WORDS;
     const word = words[Math.floor(Math.random() * words.length)];
     setHardDropReaction({
       active: true,
       word,
       startTime: Date.now(),
     });
+    if (showMoustacheModeRef.current) {
+      moustacheFlapRef.current = { active: true, startTime: Date.now() };
+      setTimeout(() => {
+        moustacheFlapRef.current = { active: false, startTime: 0 };
+      }, 800);
+    }
     setTimeout(() => setHardDropReaction(null), 600);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRotate = useCallback(() => {
+    if (showMoustacheModeRef.current) {
+      moustacheWiggleRef.current = { active: true, startTime: Date.now() };
+      setTimeout(() => {
+        moustacheWiggleRef.current = { active: false, startTime: 0 };
+      }, 500);
+    }
   }, []);
 
   const getLineClearText = (lines: number): string => {
@@ -313,6 +345,11 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         decay: 0.94,
         scalar: 0.8,
       });
+    } else if (showMoustacheModeRef.current) {
+      moustacheCurlRef.current = { active: true, startTime: Date.now() };
+      setTimeout(() => {
+        moustacheCurlRef.current = { active: false, startTime: 0 };
+      }, 800);
     }
   }, []);
 
@@ -592,6 +629,209 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
         RIGHT_EYE_OUTER_IDX_ALT,
         "#FFE600",
       );
+    } else if (showMoustacheMode) {
+      // --- MOUSTACHE MODE FACE VISUALS ---
+      const noseTipM = faceLandmarks[NOSE_TIP_IDX];
+      const foreheadM = faceLandmarks[FOREHEAD_IDX];
+      const upperLipM = faceLandmarks[13];
+      const mouthLeftM = faceLandmarks[61];
+      const mouthRightM = faceLandmarks[291];
+
+      if (noseTipM && upperLipM && mouthLeftM && mouthRightM && foreheadM) {
+        const faceHM =
+          Math.abs(noseTipM.y - foreheadM.y) * canvas.height || 100;
+        const noseX = noseTipM.x * canvas.width;
+        const noseY = noseTipM.y * canvas.height;
+        const lipY = upperLipM.y * canvas.height;
+        const mCenterY = (noseY + lipY) / 2 + faceHM * 0.02;
+        const mCenterX = noseX;
+        const mouthW =
+          Math.abs(mouthRightM.x - mouthLeftM.x) * canvas.width;
+        const stacheW = mouthW * 1.6;
+        const stacheH = faceHM * 0.18;
+
+        // Animation offsets
+        let wiggleAngle = 0;
+        let curlExtra = 0;
+        let flapOffsetY = 0;
+
+        if (moustacheWiggleRef.current.active) {
+          const elapsed = Date.now() - moustacheWiggleRef.current.startTime;
+          const decay = Math.max(0, 1 - elapsed / 500);
+          wiggleAngle = Math.sin(elapsed * 0.03) * 0.15 * decay;
+        }
+
+        if (moustacheCurlRef.current.active) {
+          const elapsed = Date.now() - moustacheCurlRef.current.startTime;
+          const progress = Math.min(elapsed / 400, 1);
+          const ease =
+            progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          const fadeOut = elapsed > 400 ? Math.max(0, 1 - (elapsed - 400) / 400) : 1;
+          curlExtra = ease * fadeOut * stacheH * 1.2;
+        }
+
+        if (moustacheFlapRef.current.active) {
+          const elapsed = Date.now() - moustacheFlapRef.current.startTime;
+          const decay = Math.max(0, 1 - elapsed / 800);
+          flapOffsetY = Math.sin(elapsed * 0.04) * stacheH * 0.5 * decay;
+        }
+
+        ctx.save();
+        ctx.translate(mCenterX, mCenterY);
+        ctx.rotate(wiggleAngle);
+
+        const grad = ctx.createLinearGradient(
+          -stacheW / 2,
+          0,
+          stacheW / 2,
+          0,
+        );
+        grad.addColorStop(0, "#1a0a00");
+        grad.addColorStop(0.3, "#3d1c02");
+        grad.addColorStop(0.5, "#5a2d0c");
+        grad.addColorStop(0.7, "#3d1c02");
+        grad.addColorStop(1, "#1a0a00");
+
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = "#0d0500";
+        ctx.lineWidth = Math.max(1.5, faceHM * 0.012);
+
+        // Left side of moustache
+        ctx.beginPath();
+        ctx.moveTo(0, -stacheH * 0.1);
+        ctx.quadraticCurveTo(
+          -stacheW * 0.15,
+          -stacheH * 0.6,
+          -stacheW * 0.35,
+          -stacheH * 0.3 + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          -stacheW * 0.5,
+          -stacheH * 0.1 - curlExtra + flapOffsetY,
+          -stacheW * 0.55,
+          -stacheH * 0.5 - curlExtra + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          -stacheW * 0.52,
+          stacheH * 0.2 - curlExtra * 0.5 + flapOffsetY,
+          -stacheW * 0.35,
+          stacheH * 0.4 + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          -stacheW * 0.15,
+          stacheH * 0.7,
+          0,
+          stacheH * 0.15,
+        );
+        ctx.fill();
+        ctx.stroke();
+
+        // Right side of moustache (mirrored)
+        ctx.beginPath();
+        ctx.moveTo(0, -stacheH * 0.1);
+        ctx.quadraticCurveTo(
+          stacheW * 0.15,
+          -stacheH * 0.6,
+          stacheW * 0.35,
+          -stacheH * 0.3 + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          stacheW * 0.5,
+          -stacheH * 0.1 - curlExtra + flapOffsetY,
+          stacheW * 0.55,
+          -stacheH * 0.5 - curlExtra + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          stacheW * 0.52,
+          stacheH * 0.2 - curlExtra * 0.5 + flapOffsetY,
+          stacheW * 0.35,
+          stacheH * 0.4 + flapOffsetY,
+        );
+        ctx.quadraticCurveTo(
+          stacheW * 0.15,
+          stacheH * 0.7,
+          0,
+          stacheH * 0.15,
+        );
+        ctx.fill();
+        ctx.stroke();
+
+        // Highlight sheen
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          -stacheH * 0.15,
+          stacheW * 0.2,
+          stacheH * 0.12,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        ctx.restore();
+
+        // Villain curl sparkles during line clear animation
+        if (moustacheCurlRef.current.active) {
+          const elapsed = Date.now() - moustacheCurlRef.current.startTime;
+          const sparkleAlpha = elapsed < 400
+            ? Math.min(elapsed / 200, 1)
+            : Math.max(0, 1 - (elapsed - 400) / 400);
+
+          if (sparkleAlpha > 0) {
+            ctx.save();
+            ctx.globalAlpha = sparkleAlpha * 0.9;
+
+            const drawSparkle = (sx: number, sy: number, size: number, phase: number) => {
+              const t = (Date.now() * 0.005 + phase) % (Math.PI * 2);
+              const s = size * (0.5 + 0.5 * Math.sin(t));
+              ctx.save();
+              ctx.translate(sx, sy);
+              ctx.rotate(t * 0.5);
+              ctx.fillStyle = "#ffd700";
+              ctx.strokeStyle = "#ff8c00";
+              ctx.lineWidth = 1;
+              for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, -s);
+                ctx.lineTo(s * 0.25, -s * 0.25);
+                ctx.lineTo(s, 0);
+                ctx.lineTo(s * 0.25, s * 0.25);
+                ctx.lineTo(0, s);
+                ctx.lineTo(-s * 0.25, s * 0.25);
+                ctx.lineTo(-s, 0);
+                ctx.lineTo(-s * 0.25, -s * 0.25);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.rotate(Math.PI / 4);
+              }
+              ctx.restore();
+            };
+
+            const tipLX = mCenterX - stacheW * 0.55;
+            const tipLY = mCenterY - stacheH * 0.5 - curlExtra;
+            const tipRX = mCenterX + stacheW * 0.55;
+            const tipRY = mCenterY - stacheH * 0.5 - curlExtra;
+
+            drawSparkle(tipLX, tipLY, faceHM * 0.05, 0);
+            drawSparkle(tipLX - faceHM * 0.04, tipLY + faceHM * 0.03, faceHM * 0.03, 1.5);
+            drawSparkle(tipRX, tipRY, faceHM * 0.05, 0.8);
+            drawSparkle(tipRX + faceHM * 0.04, tipRY + faceHM * 0.03, faceHM * 0.03, 2.3);
+
+            ctx.restore();
+          }
+        }
+      }
+
+      // Draw landmarks for brows and mouth even in moustache mode
+      drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
+      drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
+      drawLandmarkGroup(MOUTH_OUTER_INDICES, mouthOpen, true);
     } else if (showLandmarks) {
       drawLandmarkGroup(LEFT_BROW_INDICES, rightBrowRaised);
       drawLandmarkGroup(RIGHT_BROW_INDICES, leftBrowRaised);
@@ -1168,6 +1408,154 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
         ctx.restore();
       }
+    } else if (hardDropReaction?.active && faceLandmarks && showMoustacheMode) {
+      const noseTipHM = faceLandmarks[NOSE_TIP_IDX];
+      const upperLipHM = faceLandmarks[13];
+      const mouthLeftHM = faceLandmarks[61];
+      const mouthRightHM = faceLandmarks[291];
+      const foreheadHM = faceLandmarks[FOREHEAD_IDX];
+
+      if (noseTipHM && upperLipHM && mouthLeftHM && mouthRightHM && foreheadHM) {
+        const faceHHM = Math.abs(noseTipHM.y - foreheadHM.y) * canvas.height || 100;
+        const lipYHM = upperLipHM.y * canvas.height;
+        const mwHM = Math.abs(mouthRightHM.x - mouthLeftHM.x) * canvas.width;
+
+        const elapsedHM = Date.now() - hardDropReaction.startTime;
+        const progHM = Math.min(elapsedHM / 600, 1);
+        const opacHM = progHM > 0.7 ? 1 - (progHM - 0.7) / 0.3 : 1;
+
+        ctx.save();
+        ctx.globalAlpha = opacHM;
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+
+        const fmxHM = canvas.width - mouthRightHM.x * canvas.width;
+        const pipeOriginY = lipYHM + faceHHM * 0.04;
+
+        // Pipe stem - angled slightly downward from corner of mouth
+        const pipeLen = mwHM * 1.4;
+        const pipeAngle = 0.25;
+        const pipeEndX = fmxHM - Math.cos(pipeAngle) * pipeLen;
+        const pipeEndY = pipeOriginY + Math.sin(pipeAngle) * pipeLen;
+        const pipeThick = faceHHM * 0.045;
+
+        ctx.beginPath();
+        ctx.moveTo(fmxHM, pipeOriginY - pipeThick);
+        ctx.lineTo(pipeEndX, pipeEndY - pipeThick);
+        ctx.lineTo(pipeEndX, pipeEndY + pipeThick);
+        ctx.lineTo(fmxHM, pipeOriginY + pipeThick);
+        ctx.closePath();
+        const stemGrad = ctx.createLinearGradient(
+          fmxHM, pipeOriginY - pipeThick,
+          fmxHM, pipeOriginY + pipeThick,
+        );
+        stemGrad.addColorStop(0, "#8B6914");
+        stemGrad.addColorStop(0.4, "#D2A448");
+        stemGrad.addColorStop(1, "#6B4E0A");
+        ctx.fillStyle = stemGrad;
+        ctx.fill();
+        ctx.strokeStyle = "#4a3508";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Pipe bowl - rounded rectangle at the end of the stem
+        const bowlW = faceHHM * 0.1;
+        const bowlH = faceHHM * 0.14;
+        const bowlX = pipeEndX - bowlW * 0.5;
+        const bowlY = pipeEndY - bowlH * 0.7;
+
+        ctx.beginPath();
+        const bowlR = bowlW * 0.25;
+        ctx.moveTo(bowlX + bowlR, bowlY);
+        ctx.lineTo(bowlX + bowlW - bowlR, bowlY);
+        ctx.quadraticCurveTo(bowlX + bowlW, bowlY, bowlX + bowlW, bowlY + bowlR);
+        ctx.lineTo(bowlX + bowlW, bowlY + bowlH - bowlR);
+        ctx.quadraticCurveTo(bowlX + bowlW, bowlY + bowlH, bowlX + bowlW - bowlR, bowlY + bowlH);
+        ctx.lineTo(bowlX + bowlR, bowlY + bowlH);
+        ctx.quadraticCurveTo(bowlX, bowlY + bowlH, bowlX, bowlY + bowlH - bowlR);
+        ctx.lineTo(bowlX, bowlY + bowlR);
+        ctx.quadraticCurveTo(bowlX, bowlY, bowlX + bowlR, bowlY);
+        ctx.closePath();
+        const bowlGrad = ctx.createLinearGradient(bowlX, bowlY, bowlX + bowlW, bowlY);
+        bowlGrad.addColorStop(0, "#6B4226");
+        bowlGrad.addColorStop(0.5, "#8B5A3C");
+        bowlGrad.addColorStop(1, "#5A3520");
+        ctx.fillStyle = bowlGrad;
+        ctx.fill();
+        ctx.strokeStyle = "#3d1c02";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Bowl rim highlight
+        ctx.beginPath();
+        ctx.moveTo(bowlX + bowlR, bowlY + 2);
+        ctx.lineTo(bowlX + bowlW - bowlR, bowlY + 2);
+        ctx.strokeStyle = "rgba(255,200,140,0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Smoke puffs rising from the bowl
+        const smokeTopX = bowlX + bowlW * 0.5;
+        const smokeTopY = bowlY;
+        const puffCount = 5;
+        const growPhase = Math.min(progHM / 0.25, 1);
+
+        for (let i = 0; i < puffCount; i++) {
+          const puffProg = (progHM * 1.5 + i * 0.18) % 1.4;
+          if (puffProg > 1) continue;
+          const drift = Math.sin((elapsedHM * 0.003) + i * 1.7) * faceHHM * 0.06;
+          const riseY = smokeTopY - puffProg * faceHHM * 0.5;
+          const riseX = smokeTopX + drift + (i % 2 === 0 ? -1 : 1) * puffProg * faceHHM * 0.04;
+          const puffSize = faceHHM * (0.04 + puffProg * 0.06) * growPhase;
+          const puffAlpha = (1 - puffProg) * 0.55;
+
+          ctx.beginPath();
+          ctx.arc(riseX, riseY, puffSize, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(200, 200, 210, ${puffAlpha})`;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(riseX + puffSize * 0.3, riseY - puffSize * 0.2, puffSize * 0.7, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(220, 220, 230, ${puffAlpha * 0.7})`;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(riseX - puffSize * 0.25, riseY + puffSize * 0.15, puffSize * 0.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(180, 180, 195, ${puffAlpha * 0.5})`;
+          ctx.fill();
+        }
+
+        // Word in a smoke cloud above the pipe
+        const cloudY = smokeTopY - faceHHM * 0.32;
+        const cloudX = smokeTopX;
+        const cloudR = mwHM * (0.35 + growPhase * 0.15);
+        const cloudAlpha = progHM < 0.15 ? progHM / 0.15 : progHM > 0.65 ? 1 - (progHM - 0.65) / 0.35 : 1;
+
+        ctx.globalAlpha = opacHM * cloudAlpha;
+        ctx.beginPath();
+        ctx.arc(cloudX, cloudY, cloudR, 0, Math.PI * 2);
+        ctx.arc(cloudX - cloudR * 0.55, cloudY + cloudR * 0.15, cloudR * 0.6, 0, Math.PI * 2);
+        ctx.arc(cloudX + cloudR * 0.55, cloudY + cloudR * 0.1, cloudR * 0.55, 0, Math.PI * 2);
+        ctx.arc(cloudX - cloudR * 0.2, cloudY - cloudR * 0.4, cloudR * 0.5, 0, Math.PI * 2);
+        ctx.arc(cloudX + cloudR * 0.3, cloudY - cloudR * 0.35, cloudR * 0.45, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(230, 230, 240, 0.9)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(180, 180, 195, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const fsMH = Math.max(10, cloudR * 0.55);
+        ctx.font = `900 ${fsMH}px "Comic Sans MS", "Chalkboard SE", cursive`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.globalAlpha = opacHM * cloudAlpha;
+        ctx.fillStyle = "#5a3520";
+        ctx.fillText(hardDropReaction.word, cloudX + 1, cloudY + 1);
+        ctx.fillStyle = "#2a1508";
+        ctx.fillText(hardDropReaction.word, cloudX, cloudY);
+
+        ctx.restore();
+      }
     } else if (hardDropReaction?.active && faceLandmarks) {
       const mouthCenter = faceLandmarks[13]; // Upper lip center
       const mouthLeft = faceLandmarks[61];
@@ -1558,6 +1946,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     showGooglyEyes,
     showLandmarks,
     showClownMode,
+    showMoustacheMode,
     stackDanger,
     hardDropReaction,
     keyboardLeftBrow,
@@ -2189,6 +2578,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
               onLineClear={handleLineClear}
               onExitFullScreen={handleExit}
               onPieceLock={triggerHardDropReaction}
+              onRotate={handleRotate}
             />
           </div>
 
@@ -2216,10 +2606,25 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowClownMode(!showClownMode)}
+                  onClick={() => {
+                    const next = !showClownMode;
+                    setShowClownMode(next);
+                    if (next) setShowMoustacheMode(false);
+                  }}
                   className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showClownMode ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
                 >
                   🤡
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !showMoustacheMode;
+                    setShowMoustacheMode(next);
+                    if (next) setShowClownMode(false);
+                  }}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors sm:h-10 sm:w-10 sm:text-xl ${showMoustacheMode ? "border-accent/50 bg-accent/20 text-accent" : "border-zinc-600 bg-zinc-800/80 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700 hover:text-white"}`}
+                >
+                  🥸
                 </button>
               </div>
             </div>

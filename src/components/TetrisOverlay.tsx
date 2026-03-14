@@ -112,6 +112,7 @@ interface TetrisOverlayProps {
   onLineClear?: (linesCleared: number) => void;
   onExitFullScreen?: () => void;
   onPieceLock?: () => void;
+  onRotate?: () => void;
 }
 
 function getNextPieceIndex(): number {
@@ -128,6 +129,7 @@ export function TetrisOverlay({
   onLineClear,
   onExitFullScreen,
   onPieceLock,
+  onRotate,
 }: TetrisOverlayProps) {
   const audio = useGameAudio(muted);
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -348,8 +350,9 @@ export function TetrisOverlay({
     if (!collides(g, rotated, p.x, p.y)) {
       setPiece({ ...p, shape: rotated });
       audio.play("rotate");
+      onRotate?.();
     }
-  }, [collides, gameOver, paused, audio]);
+  }, [collides, gameOver, paused, audio, onRotate]);
 
   const hardDrop = useCallback(() => {
     const p = pieceRef.current;
@@ -617,6 +620,7 @@ export function TetrisOverlay({
         <div className="flex w-full shrink-0 gap-1">
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setPaused((p) => !p)}
             className="flex min-h-[32px] flex-1 items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
           >
@@ -624,6 +628,7 @@ export function TetrisOverlay({
           </button>
           <button
             type="button"
+            tabIndex={-1}
             onClick={onToggleMute}
             className="flex min-h-[32px] items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
             title={muted ? "Unmute (M)" : "Mute (M)"}
@@ -663,6 +668,7 @@ export function TetrisOverlay({
           {onExitFullScreen && (
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => {
                 audio.stopMusic();
                 onExitFullScreen?.();
