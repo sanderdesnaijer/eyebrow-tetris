@@ -9,6 +9,7 @@ import { GameOverModal } from "@/components/GameOverModal";
 import { MeltScreen } from "@/components/MeltScreen";
 import type { GameStats } from "@/components/TetrisOverlay";
 import { checkScoreQualifies } from "@/lib/supabase";
+import { LatestRelease } from "@/components/LatestRelease";
 
 export default function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -186,6 +187,13 @@ export default function HomePage() {
               </Link>{" "}
               to see the top scores.
             </p>
+          </section>
+
+          <section className="mt-12 text-left">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--accent)]">
+              Latest Update
+            </h2>
+            <LatestRelease />
           </section>
 
           <section className="mt-12 text-left">

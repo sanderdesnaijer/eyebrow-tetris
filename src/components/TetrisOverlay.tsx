@@ -631,7 +631,10 @@ export function TetrisOverlay({
           {onExitFullScreen && (
             <button
               type="button"
-              onClick={onExitFullScreen}
+              onClick={() => {
+                audio.stopMusic();
+                onExitFullScreen?.();
+              }}
               className="flex min-h-[32px] flex-1 items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
             >
               Exit

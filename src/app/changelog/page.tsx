@@ -52,6 +52,7 @@ function parseMarkdown(text: string): string {
   if (!text) return "";
 
   return text
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[var(--accent)] hover:underline">$1</a>')
     .replace(/^### (.+)$/gm, '<h4 class="mt-4 mb-2 font-semibold text-zinc-200">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 class="mt-4 mb-2 font-semibold text-zinc-100">$1</h3>')
     .replace(/^\* (.+)$/gm, '<li class="ml-4">$1</li>')
@@ -59,7 +60,8 @@ function parseMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/`(.+?)`/g, '<code class="rounded bg-zinc-800 px-1 py-0.5 text-sm text-[var(--accent)]">$1</code>')
     .replace(/\n\n/g, "</p><p class='mt-3'>")
-    .replace(/<\/li>\n<li/g, "</li><li");
+    .replace(/<\/li>\n<li/g, "</li><li")
+    .replace(/(?<=^|[^"=])https?:\/\/[^\s<)]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer" class="text-[var(--accent)] hover:underline break-all">$&</a>');
 }
 
 export default async function ChangelogPage() {
