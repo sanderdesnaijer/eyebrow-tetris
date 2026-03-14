@@ -9,6 +9,7 @@ import {
   type InputMode,
   TETRIS_COLORS,
 } from "./TetrisOverlay";
+import { TutorialOverlay, hasSeenTutorial } from "./TutorialOverlay";
 
 const MEDIAPIPE_NOISE_RE = /^\s*(INFO: |[IW]\d{4} |Graph successfully started)/;
 
@@ -155,6 +156,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     isInDanger: false,
     dangerLevel: 0,
   });
+  const [showTutorial, setShowTutorial] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("eyebrow");
   const inputModeRef = useRef<InputMode>("eyebrow");
   const [muted, setMuted] = useState(() => {
@@ -200,6 +202,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
     // Spin state for wild spinning
     spinAccumulator: 0,
     isSpinning: false,
+    frameCount: 0,
   });
 
   // Hard drop reaction bubble state
@@ -414,6 +417,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       physics.prevLeftY = leftBrowY;
       physics.prevRightY = rightBrowY;
+      physics.frameCount++;
 
       // Impulse on sudden brow movement for extra "pop"
       const velChange =
@@ -438,17 +442,20 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       const avgBrowLift = (physics.leftLiftVel + physics.rightLiftVel) / 2;
 
       // Detect fast movements for wild spinning
+      // Skip the first few frames so initial face-detection jitter doesn't
+      // immediately trigger a spin when the game starts.
       const combinedVelocity =
         Math.abs(physics.leftLiftVel) + Math.abs(physics.rightLiftVel);
-      const velocityThreshold = 2; // Threshold for "fast" movement
+      const velocityThreshold = 2;
+      const stabilised = physics.frameCount > 10;
 
-      if (combinedVelocity > velocityThreshold) {
+      if (stabilised && combinedVelocity > velocityThreshold) {
         physics.spinAccumulator += combinedVelocity * dt * 5;
         if (physics.spinAccumulator > 3) {
           physics.isSpinning = true;
         }
       } else {
-        physics.spinAccumulator *= 0.9; // Decay
+        physics.spinAccumulator *= 0.9;
       }
 
       // Physics simulation
@@ -1404,6 +1411,10 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
 
       setStatus("ready");
 
+      if (!hasSeenTutorial()) {
+        setShowTutorial(true);
+      }
+
       const runLoop = () => {
         const video = videoRef.current;
         const faceLandmarker = faceLandmarkerRef.current;
@@ -1798,7 +1809,7 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <TetrisOverlay
               tetrisRef={tetrisRef}
-              visible={status === "ready"}
+              visible={status === "ready" && !showTutorial}
               inputMode={inputMode}
               muted={muted}
               onToggleMute={toggleMute}
@@ -2048,6 +2059,13 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
             Go Back
           </button>
         </div>
+      )}
+
+      {showTutorial && (
+        <TutorialOverlay
+          forceShow
+          onDismiss={() => setShowTutorial(false)}
+        />
       )}
     </div>
   );

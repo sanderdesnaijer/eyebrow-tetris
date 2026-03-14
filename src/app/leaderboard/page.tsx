@@ -12,12 +12,20 @@ export default function LeaderboardPage() {
   const [inputModeFilter, setInputModeFilter] = useState<InputMode | 'all'>('eyebrow');
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     const mode = inputModeFilter === 'all' ? undefined : inputModeFilter;
-    fetchLeaderboard(mode, 100).then((data) => {
-      setEntries(data);
-      setLoading(false);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
     });
+    fetchLeaderboard(mode, 100).then((data) => {
+      if (!cancelled) {
+        setEntries(data);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [inputModeFilter]);
 
   const sortedEntries = [...entries].sort((a, b) => b[sortField] - a[sortField]);

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Press_Start_2P, Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
@@ -162,7 +163,7 @@ export default function RootLayout({
             rel="noopener noreferrer"
             className="group mt-4 inline-flex items-center gap-2 text-xs text-neutral-300 transition-colors hover:text-white"
           >
-            <img
+            <Image
               src="/logo-sanderdesnaijer.svg"
               alt="Sander de Snaijer"
               width={20}

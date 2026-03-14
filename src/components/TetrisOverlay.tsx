@@ -422,7 +422,21 @@ export function TetrisOverlay({
     hardDrop,
     softDrop,
     getCurrentPiece: () => pieceRef.current,
-    getDangerLevel: () => ({ isInDanger, dangerLevel }),
+    getDangerLevel: () => {
+      const g = gridRef.current;
+      let stackHeight = 0;
+      for (let row = 0; row < ROWS; row++) {
+        if (g[row].some((cell) => cell !== null)) {
+          stackHeight = ROWS - row;
+          break;
+        }
+      }
+      const dangerThreshold = ROWS * 0.6;
+      return {
+        isInDanger: stackHeight >= dangerThreshold,
+        dangerLevel: Math.min(1, (stackHeight - dangerThreshold) / (ROWS * 0.3)),
+      };
+    },
   }));
 
   useEffect(() => {
@@ -576,32 +590,6 @@ export function TetrisOverlay({
       return false;
     return shape[dy][dx] === 1;
   };
-
-  // Calculate how high the stack is (0 = empty, ROWS = full)
-  const getStackHeight = (): number => {
-    for (let row = 0; row < ROWS; row++) {
-      if (grid[row].some((cell) => cell !== null)) {
-        return ROWS - row;
-      }
-    }
-    return 0;
-  };
-
-  const stackHeight = getStackHeight();
-  const dangerThreshold = ROWS * 0.6; // 60% of board height = danger zone
-  const isInDanger = stackHeight >= dangerThreshold;
-  const dangerLevel = Math.min(
-    1,
-    (stackHeight - dangerThreshold) / (ROWS * 0.3),
-  ); // 0-1 scale for intensity
-
-  const CONTROL_MAPPING = [
-    { cmd: "← Move Left", gesture: "Left Brow Up", icon: "←" },
-    { cmd: "Move Right →", gesture: "Right Brow Up", icon: "→" },
-    { cmd: "Rotate", gesture: "Both Brows Up", icon: "↻" },
-    { cmd: "↓ Soft Drop", gesture: "Mouth Open", icon: "↓" },
-    { cmd: "⬇ Hard Drop", gesture: "Both Brows + Mouth / Space", icon: "⬇" },
-  ] as const;
 
   return (
     <div

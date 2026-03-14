@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { GameScreen } from "@/components/GameScreen";
 import { ScoreSubmitModal } from "@/components/ScoreSubmitModal";
@@ -185,6 +186,58 @@ export default function HomePage() {
               </Link>{" "}
               to see the top scores.
             </p>
+          </section>
+
+          <section className="mt-12 text-left">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--accent)]">
+              More Webcam Games
+            </h2>
+            <a
+              href="https://pugshunt.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-[var(--accent)]/40 hover:bg-zinc-900/80"
+            >
+              <Image
+                src="/banner-pugshunt.webp"
+                alt="Pug's Hunt — a retro Duck Hunt-style browser game controlled by webcam hand tracking"
+                width={600}
+                height={315}
+                className="w-full"
+                loading="lazy"
+              />
+              <div className="p-5">
+                <h3 className="mb-2 text-base font-semibold text-[var(--blue)] transition-colors group-hover:text-[var(--blue-hover)]">
+                  Pug&apos;s Hunt
+                </h3>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  If you enjoyed Eyebrow Tetris, try Pug&apos;s Hunt — a chaotic
+                  Duck Hunt-style{" "}
+                  <strong className="text-zinc-300">
+                    webcam shooting game
+                  </strong>{" "}
+                  you control with your fingers and mouth. Point to aim, pinch to
+                  shoot. No controller needed.
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] transition-colors group-hover:text-[var(--accent-hover)]">
+                  Play at pugshunt.com
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-transform group-hover:translate-x-0.5"
+                  >
+                    <path d="M7 17l9.2-9.2M17 17V7H7" />
+                  </svg>
+                </span>
+              </div>
+            </a>
           </section>
         </div>
       </div>

@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 
+/** Deterministic pseudo-random 0–1 from index + seed (avoids Math.random during render) */
+function drand(i: number, seed: number): number {
+  const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+  return ((x - Math.floor(x)) * 0.5 + 0.5) % 1;
+}
+
 interface MeltScreenProps {
   onComplete: () => void;
   duration?: number;
@@ -10,17 +16,47 @@ interface MeltScreenProps {
 export function MeltScreen({ onComplete, duration = 2500 }: MeltScreenProps) {
   const [phase, setPhase] = useState<"melting" | "fading" | "complete">("melting");
 
-  // Generate random drip data once on mount
-  const drips = useMemo(() => 
-    Array.from({ length: 30 }).map((_, i) => ({
-      id: i,
-      left: (i / 30) * 100 + (Math.random() - 0.5) * 3,
-      width: 6 + Math.random() * 20,
-      delay: i * 0.05 + Math.random() * 0.2,
-      duration: 1.2 + Math.random() * 0.8,
-      hue: Math.random() * 360,
-    })),
-  []);
+  // Generate deterministic drip data (stable across re-renders)
+  const drips = useMemo(
+    () =>
+      Array.from({ length: 30 }).map((_, i) => ({
+        id: i,
+        left: (i / 30) * 100 + (drand(i, 1) - 0.5) * 3,
+        width: 6 + drand(i, 2) * 20,
+        delay: i * 0.05 + drand(i, 3) * 0.2,
+        duration: 1.2 + drand(i, 4) * 0.8,
+        hue: drand(i, 5) * 360,
+      })),
+    [],
+  );
+
+  const secondaryDrips = useMemo(
+    () =>
+      Array.from({ length: 15 }).map((_, i) => ({
+        id: i,
+        left: (i / 15) * 100 + drand(i, 10) * 6,
+        width: 15 + drand(i, 11) * 30,
+        duration: 1.8 + drand(i, 12) * 0.5,
+      })),
+    [],
+  );
+
+  const glitchLines = useMemo(
+    () =>
+      Array.from({ length: 8 }).map((_, i) => ({
+        id: i,
+        top: 10 + i * 12,
+        grad: [
+          drand(i, 20) * 30,
+          30 + drand(i, 21) * 10,
+          50 + drand(i, 22) * 10,
+          70 + drand(i, 23) * 30,
+        ] as const,
+        anim: 0.1 + drand(i, 24) * 0.2,
+        delay: 0.5 + i * 0.1,
+      })),
+    [],
+  );
 
   useEffect(() => {
     // Phase timing
@@ -82,21 +118,21 @@ export function MeltScreen({ onComplete, duration = 2500 }: MeltScreenProps) {
 
       {/* Secondary drip layer for depth */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {Array.from({ length: 15 }).map((_, i) => (
+        {secondaryDrips.map((drip) => (
           <div
-            key={`secondary-${i}`}
+            key={`secondary-${drip.id}`}
             className="absolute top-0 animate-melt-drip"
             style={{
-              left: `${(i / 15) * 100 + Math.random() * 6}%`,
-              width: `${15 + Math.random() * 30}px`,
+              left: `${drip.left}%`,
+              width: `${drip.width}px`,
               background: `linear-gradient(
                 to bottom,
                 transparent 0%,
                 rgba(20, 20, 20, 0.7) 10%,
                 rgba(10, 10, 10, 0.9) 100%
               )`,
-              animationDelay: `${0.3 + i * 0.1}s`,
-              animationDuration: `${1.8 + Math.random() * 0.5}s`,
+              animationDelay: `${0.3 + drip.id * 0.1}s`,
+              animationDuration: `${drip.duration}s`,
               filter: "blur(2px)",
             }}
           />
@@ -105,20 +141,20 @@ export function MeltScreen({ onComplete, duration = 2500 }: MeltScreenProps) {
 
       {/* Glitch/distortion lines */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {glitchLines.map((line) => (
           <div
-            key={`glitch-${i}`}
+            key={`glitch-${line.id}`}
             className="absolute h-1 w-full"
             style={{
-              top: `${10 + i * 12}%`,
+              top: `${line.top}%`,
               background: `linear-gradient(
                 90deg,
-                transparent ${Math.random() * 30}%,
-                rgba(255, 0, 0, 0.1) ${30 + Math.random() * 10}%,
-                rgba(0, 255, 255, 0.1) ${50 + Math.random() * 10}%,
-                transparent ${70 + Math.random() * 30}%
+                transparent ${line.grad[0]}%,
+                rgba(255, 0, 0, 0.1) ${line.grad[1]}%,
+                rgba(0, 255, 255, 0.1) ${line.grad[2]}%,
+                transparent ${line.grad[3]}%
               )`,
-              animation: `melt-glitch-line ${0.1 + Math.random() * 0.2}s linear ${0.5 + i * 0.1}s infinite`,
+              animation: `melt-glitch-line ${line.anim}s linear ${line.delay}s infinite`,
               opacity: phase === "melting" ? 0.6 : 0,
               transition: "opacity 0.3s",
             }}

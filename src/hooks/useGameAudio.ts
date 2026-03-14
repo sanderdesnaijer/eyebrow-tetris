@@ -20,7 +20,10 @@ export function useGameAudio(muted: boolean) {
   const sfxCache = useRef<Map<SoundName, HTMLAudioElement>>(new Map());
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const mutedRef = useRef(muted);
-  mutedRef.current = muted;
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   const getOrCreateSfx = useCallback((name: SoundName): HTMLAudioElement => {
     let el = sfxCache.current.get(name);
@@ -87,10 +90,12 @@ export function useGameAudio(muted: boolean) {
   }, [muted]);
 
   useEffect(() => {
+    const cache = sfxCache.current;
+    const music = musicRef.current;
     return () => {
-      musicRef.current?.pause();
+      music?.pause();
       musicRef.current = null;
-      sfxCache.current.clear();
+      cache.clear();
     };
   }, []);
 
