@@ -2498,11 +2498,21 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
       className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden ${
         lineClearFlash.active ? "animate-screen-shake-intense" : ""
       }`}
-      style={{
-        background:
-          "radial-gradient(circle at 50% 30%, #ff7a00 0%, #2b1055 40%, #0a0a0a 100%)",
-      }}
+      style={{ background: "#0a0a14" }}
     >
+      <div
+        className="neon-grid-animate pointer-events-none absolute inset-0"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-[-120px]"
+        aria-hidden="true"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(0,240,255,0.25), rgba(176,0,255,0.12), transparent 70%)",
+          filter: "blur(80px)",
+        }}
+      />
       <div className="flex h-full w-full max-w-5xl flex-row">
         <div className="relative flex min-h-0 min-w-0 flex-1">
           <video
