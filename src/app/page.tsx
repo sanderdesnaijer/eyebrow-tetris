@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { GameScreen } from "@/components/GameScreen";
 import { ScoreSubmitModal } from "@/components/ScoreSubmitModal";
 import { GameOverModal } from "@/components/GameOverModal";
@@ -142,10 +143,49 @@ export default function HomePage() {
                 <li>• Good lighting helps detection</li>
                 <li>• Face the camera directly</li>
                 <li>• Exaggerate your expressions</li>
-                <li>• Use keyboard as backup (WASD/Arrows)</li>
+                <li>
+                  •{" "}
+                  <Link
+                    href="/how-to-play"
+                    className="text-[var(--accent)] hover:underline"
+                  >
+                    See all controls
+                  </Link>{" "}
+                  including keyboard backup
+                </li>
               </ul>
             </div>
           </div>
+
+          <section className="mt-12 text-left">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--accent)]">
+              What is Eyebrow Tetris?
+            </h2>
+            <p className="text-sm leading-relaxed text-zinc-400">
+              Eyebrow Tetris is a free online Tetris game you control with your
+              face. Using AI-powered webcam face detection (MediaPipe), the game
+              reads your eyebrow movements and mouth expressions to move and
+              drop Tetris pieces. No downloads, no installs — just open your
+              browser and play. Works on Chrome, Firefox, Edge, and Safari.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              New to the game?{" "}
+              <Link
+                href="/how-to-play"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Learn how to play
+              </Link>{" "}
+              or check out the{" "}
+              <Link
+                href="/leaderboard"
+                className="text-[var(--accent)] hover:underline"
+              >
+                leaderboard
+              </Link>{" "}
+              to see the top scores.
+            </p>
+          </section>
         </div>
       </div>
 

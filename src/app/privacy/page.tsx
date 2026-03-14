@@ -1,16 +1,51 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/constants";
+import { BreadcrumbJsonLd } from "@/components/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy policy for Eyebrow Tetris - how we handle your data.",
+  description:
+    "Eyebrow Tetris privacy policy — how we handle camera data, leaderboard scores, and your privacy. No video is ever transmitted to any server.",
+  alternates: {
+    canonical: "/privacy",
+  },
+  keywords: [
+    "eyebrow tetris privacy",
+    "webcam game privacy",
+    "face detection game data",
+    "mediapipe privacy",
+  ],
+  openGraph: {
+    title: "Privacy Policy - Eyebrow Tetris",
+    description:
+      "How Eyebrow Tetris handles camera data and your privacy. All face detection runs locally — no video is ever sent to any server.",
+    url: `${SITE_URL}/privacy`,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eyebrow Tetris Privacy Policy",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy - Eyebrow Tetris",
+    description:
+      "How Eyebrow Tetris handles camera data and your privacy. All face detection runs locally — no video is ever sent to any server.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="pixel-font mb-8 text-2xl text-[var(--blue)]">
-        PRIVACY POLICY
-      </h1>
+    <>
+      <BreadcrumbJsonLd items={[{ name: "Privacy Policy", path: "/privacy" }]} />
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <h1 className="pixel-font mb-8 text-2xl text-[var(--blue)]">
+          PRIVACY POLICY
+        </h1>
 
       <div className="space-y-8 text-zinc-300">
         <section>
@@ -149,6 +184,7 @@ export default function PrivacyPage() {
           <p className="text-sm text-zinc-500">Last updated: March 2026</p>
         </section>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

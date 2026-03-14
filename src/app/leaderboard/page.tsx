@@ -74,6 +74,17 @@ export default function LeaderboardPage() {
         </button>
       </div>
 
+      <noscript>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 text-center">
+          <p className="text-zinc-400">
+            The Eyebrow Tetris leaderboard shows the top scores from players
+            around the world. Rankings are available for both eyebrow (face
+            control) mode and keyboard mode. Enable JavaScript to view live
+            scores.
+          </p>
+        </div>
+      </noscript>
+
       {loading ? (
         <div className="py-12 text-center text-zinc-400">
           Loading leaderboard...

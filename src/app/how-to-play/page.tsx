@@ -1,9 +1,83 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { SITE_URL } from "@/lib/constants";
+import { BreadcrumbJsonLd } from "@/components/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Play",
+  title: "How to Play Eyebrow Tetris - Face & Webcam Controls Guide",
   description:
-    "Learn how to play Eyebrow Tetris - control Tetris using your facial expressions.",
+    "Learn how to play Eyebrow Tetris — the free webcam Tetris game controlled by facial expressions. Master eyebrow and mouth gestures for face-controlled gaming.",
+  alternates: {
+    canonical: "/how-to-play",
+  },
+  keywords: [
+    "how to play eyebrow tetris",
+    "face tetris controls",
+    "webcam game controls",
+    "facial expression gaming tutorial",
+    "eyebrow game instructions",
+    "play tetris with face guide",
+  ],
+  openGraph: {
+    title: "How to Play Eyebrow Tetris - Face & Webcam Controls Guide",
+    description:
+      "Master the face controls: raise eyebrows to move, open mouth to drop. Complete guide to playing Tetris with your webcam.",
+    url: `${SITE_URL}/how-to-play`,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eyebrow Tetris - How to play with face controls",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "How to Play Eyebrow Tetris - Face Controls Guide",
+    description:
+      "Master the face controls: raise eyebrows to move, open mouth to drop. Complete guide to playing Tetris with your webcam.",
+    images: ["/og-image.png"],
+  },
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How do you play Eyebrow Tetris?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Raise your left eyebrow to move pieces left, right eyebrow to move right, both eyebrows to rotate, and open your mouth to drop pieces faster. You can also use keyboard controls (arrow keys or WASD) as a backup.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do I need a webcam to play Eyebrow Tetris?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes, Eyebrow Tetris uses your webcam with AI face detection (Google MediaPipe) to read your facial expressions. All processing happens locally in your browser — no video is ever sent to any server.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is Eyebrow Tetris free to play?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes, Eyebrow Tetris is completely free to play in your browser. No download or installation required.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Which browsers support Eyebrow Tetris?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Eyebrow Tetris works on modern browsers that support the webcam API, including Chrome, Firefox, Edge, and Safari. For the best experience, use Chrome or Edge on desktop.",
+      },
+    },
+  ],
 };
 
 export default function HowToPlayPage() {
@@ -49,10 +123,16 @@ export default function HowToPlayPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
-        HOW TO PLAY
-      </h1>
+    <>
+      <BreadcrumbJsonLd items={[{ name: "How to Play", path: "/how-to-play" }]} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
+          HOW TO PLAY
+        </h1>
 
       <div className="space-y-12">
         <section>
@@ -223,7 +303,21 @@ export default function HowToPlayPage() {
             </ul>
           </div>
         </section>
+
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 text-center">
+          <p className="text-zinc-400">
+            Ready to compete? Check the{" "}
+            <Link
+              href="/leaderboard"
+              className="text-[var(--accent)] hover:underline"
+            >
+              leaderboard
+            </Link>{" "}
+            to see how you stack up against other players.
+          </p>
+        </section>
       </div>
     </div>
+    </>
   );
 }

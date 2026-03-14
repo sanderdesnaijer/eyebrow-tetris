@@ -157,6 +157,17 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
   });
   const [inputMode, setInputMode] = useState<InputMode>("eyebrow");
   const inputModeRef = useRef<InputMode>("eyebrow");
+  const [muted, setMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("eyebrow-tetris-muted") === "true";
+  });
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      localStorage.setItem("eyebrow-tetris-muted", String(next));
+      return next;
+    });
+  }, []);
   const googlyPupilRef = useRef({
     leftX: 0,
     leftY: 0,
@@ -1786,6 +1797,8 @@ export function GameScreen({ onGameOver, onExit }: GameScreenProps) {
               tetrisRef={tetrisRef}
               visible={status === "ready"}
               inputMode={inputMode}
+              muted={muted}
+              onToggleMute={toggleMute}
               onGameOver={onGameOver}
               onLineClear={handleLineClear}
               onExitFullScreen={handleExit}

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useGameAudio } from "../hooks/useGameAudio";
 
 const COLS = 10;
 const ROWS = 20;
@@ -105,6 +106,8 @@ interface TetrisOverlayProps {
   tetrisRef: React.RefObject<TetrisOverlayRef | null>;
   visible: boolean;
   inputMode: InputMode;
+  muted: boolean;
+  onToggleMute: () => void;
   onGameOver?: (stats: GameStats) => void;
   onLineClear?: (linesCleared: number) => void;
   onExitFullScreen?: () => void;
@@ -119,11 +122,14 @@ export function TetrisOverlay({
   tetrisRef,
   visible,
   inputMode,
+  muted,
+  onToggleMute,
   onGameOver,
   onLineClear,
   onExitFullScreen,
   onPieceLock,
 }: TetrisOverlayProps) {
+  const audio = useGameAudio(muted);
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const previewCell = usePreviewCell(gridContainerRef);
   const [grid, setGrid] = useState<(number | null)[][]>(() =>
@@ -167,11 +173,13 @@ export function TetrisOverlay({
   }, []);
 
   useEffect(() => {
-    if (gameOver && !gameOverCalledRef.current && onGameOver) {
+    if (gameOver && !gameOverCalledRef.current) {
       gameOverCalledRef.current = true;
-      onGameOver({ score, level, lines, inputMode });
+      audio.stopMusic();
+      audio.play("gameOver");
+      onGameOver?.({ score, level, lines, inputMode });
     }
-  }, [gameOver, score, level, lines, inputMode, onGameOver]);
+  }, [gameOver, score, level, lines, inputMode, onGameOver, audio]);
 
   const createPiece = useCallback((idx?: number) => {
     const i = idx ?? getNextPieceIndex();
@@ -294,6 +302,7 @@ export function TetrisOverlay({
         return newScore;
       });
       setLevel(() => Math.min(10, Math.floor((lines + cleared) / 10) + 1));
+      audio.play("clearLine");
       onLineClear?.(cleared);
     }
 
@@ -313,6 +322,7 @@ export function TetrisOverlay({
     level,
     lines,
     nextPieceIndex,
+    audio,
     onLineClear,
     onPieceLock,
   ]);
@@ -324,9 +334,10 @@ export function TetrisOverlay({
       const g = gridRef.current;
       if (!collides(g, p.shape, p.x + dx, p.y)) {
         setPiece({ ...p, x: p.x + dx });
+        audio.play("move");
       }
     },
-    [collides, gameOver, paused],
+    [collides, gameOver, paused, audio],
   );
 
   const rotate = useCallback(() => {
@@ -336,8 +347,9 @@ export function TetrisOverlay({
     const g = gridRef.current;
     if (!collides(g, rotated, p.x, p.y)) {
       setPiece({ ...p, shape: rotated });
+      audio.play("rotate");
     }
-  }, [collides, gameOver, paused]);
+  }, [collides, gameOver, paused, audio]);
 
   const hardDrop = useCallback(() => {
     const p = pieceRef.current;
@@ -347,8 +359,9 @@ export function TetrisOverlay({
     while (!collides(g, p.shape, p.x, y + 1)) y++;
     const dropped = { ...p, y };
     pieceRef.current = dropped;
+    audio.play("hardFall");
     lockPiece();
-  }, [collides, lockPiece, gameOver, paused]);
+  }, [collides, lockPiece, gameOver, paused, audio]);
 
   const softDrop = useCallback(() => {
     const p = pieceRef.current;
@@ -358,8 +371,9 @@ export function TetrisOverlay({
       lockPiece();
     } else {
       setPiece({ ...p, y: p.y + 1 });
+      audio.play("move");
     }
-  }, [collides, lockPiece, gameOver, paused]);
+  }, [collides, lockPiece, gameOver, paused, audio]);
 
   const tick = useCallback(() => {
     const p = pieceRef.current;
@@ -430,7 +444,17 @@ export function TetrisOverlay({
     setNextPieceIndex(nextIdx);
     const p = createPiece(firstPieceIdx);
     setPiece(p);
-  }, [visible, createPiece]);
+    audio.startMusic();
+  }, [visible, createPiece, audio]);
+
+  useEffect(() => {
+    if (!visible || gameOver) return;
+    if (paused) {
+      audio.pauseMusic();
+    } else {
+      audio.resumeMusic();
+    }
+  }, [visible, gameOver, paused, audio]);
 
   useEffect(() => {
     if (!visible || gameOver || paused) return;
@@ -452,6 +476,11 @@ export function TetrisOverlay({
           e.preventDefault();
           restart();
         }
+        return;
+      }
+      if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        onToggleMute();
         return;
       }
       if (e.key === " " || e.key === "p" || e.key === "P") {
@@ -527,7 +556,7 @@ export function TetrisOverlay({
       window.removeEventListener("keyup", keyUpHandler);
       clearInterval(intervalId);
     };
-  }, [visible, gameOver, paused, move, rotate, softDrop, restart]);
+  }, [visible, gameOver, paused, move, rotate, softDrop, restart, onToggleMute]);
 
   if (!visible) return null;
 
@@ -578,7 +607,7 @@ export function TetrisOverlay({
         boxShadow: "0 0 6px rgba(0,255,255,0.12), 0 0 16px rgba(0,255,255,0.06)",
       }}
     >
-      {/* Pause and Exit buttons above the title */}
+      {/* Pause, Mute and Exit buttons above the title */}
       {!gameOver && (
         <div className="flex w-full shrink-0 gap-1">
           <button
@@ -587,6 +616,26 @@ export function TetrisOverlay({
             className="flex min-h-[32px] flex-1 items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
           >
             {paused ? "Resume" : "Pause"}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="flex min-h-[32px] items-center justify-center rounded-lg border border-zinc-500 px-2 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white sm:min-h-[36px] sm:text-sm"
+            title={muted ? "Unmute (M)" : "Mute (M)"}
+          >
+            {muted ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            )}
           </button>
           {onExitFullScreen && (
             <button

@@ -1,9 +1,42 @@
 import type { Metadata } from "next";
 import { fetchReleases } from "@/lib/github";
+import { SITE_URL } from "@/lib/constants";
+import { BreadcrumbJsonLd } from "@/components/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
-  title: "Changelog",
-  description: "Version history and release notes for Eyebrow Tetris.",
+  title: "Changelog - Updates & Release Notes",
+  description:
+    "Eyebrow Tetris changelog — version history, new features, and release notes. See what's new in the face-controlled Tetris game.",
+  alternates: {
+    canonical: "/changelog",
+  },
+  keywords: [
+    "eyebrow tetris changelog",
+    "eyebrow tetris updates",
+    "face tetris version history",
+    "eyebrow tetris release notes",
+  ],
+  openGraph: {
+    title: "Changelog - Eyebrow Tetris Updates & Release Notes",
+    description:
+      "Version history and release notes for Eyebrow Tetris. See what's new in the face-controlled Tetris game.",
+    url: `${SITE_URL}/changelog`,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eyebrow Tetris Changelog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Changelog - Eyebrow Tetris Updates",
+    description:
+      "Version history and release notes for Eyebrow Tetris. See what's new in the face-controlled Tetris game.",
+    images: ["/og-image.png"],
+  },
 };
 
 function formatDate(dateString: string) {
@@ -33,10 +66,12 @@ export default async function ChangelogPage() {
   const releases = await fetchReleases();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
-        CHANGELOG
-      </h1>
+    <>
+      <BreadcrumbJsonLd items={[{ name: "Changelog", path: "/changelog" }]} />
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <h1 className="pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
+          CHANGELOG
+        </h1>
 
       {releases.length === 0 ? (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 py-12 text-center">
@@ -114,6 +149,7 @@ export default async function ChangelogPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

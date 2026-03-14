@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Press_Start_2P, Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
+import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,43 +21,50 @@ const pressStart2P = Press_Start_2P({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sanderdesnaijer.github.io/eyebrow-tetris";
-
 export const metadata: Metadata = {
   title: {
-    default: "Eyebrow Tetris - Control Tetris with Your Face",
+    default:
+      "Eyebrow Tetris - Play Tetris with Your Face | Free Online Webcam Game",
     template: "%s | Eyebrow Tetris",
   },
   description:
-    "Play Tetris using facial expressions! Raise your eyebrows to move pieces, open your mouth to drop. A fun face-controlled game using AI face detection.",
-  metadataBase: new URL(siteUrl),
+    "Play Tetris with your face using AI webcam detection. Raise your eyebrows to move pieces, open your mouth to drop. Free browser game — no download needed.",
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+  },
   keywords: [
-    "tetris",
-    "face control",
-    "eyebrow game",
-    "mediapipe",
-    "face detection",
-    "browser game",
-    "facial expressions",
+    "eyebrow tetris",
+    "play tetris with face",
+    "face controlled tetris",
+    "webcam tetris game",
+    "play tetris with webcam",
+    "face controlled browser game",
+    "eyebrow controlled game",
+    "facial expression game",
+    "mediapipe face detection game",
+    "free online tetris",
+    "AI face detection game",
+    "browser game no download",
   ],
-  authors: [{ name: "Sander de Snaijer" }],
+  authors: [{ name: "Sander de Snaijer", url: "https://www.sanderdesnaijer.com/" }],
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
   },
   openGraph: {
-    title: "Eyebrow Tetris - Control Tetris with Your Face",
+    title: "Eyebrow Tetris - Play Tetris with Your Face | Free Online Game",
     description:
-      "Play Tetris using your eyebrows and mouth! A unique face-controlled gaming experience.",
-    url: siteUrl,
+      "Play Tetris with your face using AI webcam detection. Raise eyebrows to move, open mouth to drop. Free — no download needed.",
+    url: SITE_URL,
     siteName: "Eyebrow Tetris",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Eyebrow Tetris - Face-controlled Tetris game",
+        alt: "Eyebrow Tetris - Face-controlled Tetris game using webcam",
       },
     ],
     locale: "en_US",
@@ -64,9 +72,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Eyebrow Tetris - Control Tetris with Your Face",
+    title: "Eyebrow Tetris - Play Tetris with Your Face",
     description:
-      "Play Tetris using your eyebrows and mouth! A unique face-controlled gaming experience.",
+      "Play Tetris with your face using AI webcam detection. Raise eyebrows to move, open mouth to drop. Free — no download needed.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -75,16 +83,47 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#3b82f6",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Eyebrow Tetris",
+    url: SITE_URL,
+    description:
+      "Play Tetris using facial expressions. Raise your eyebrows to move pieces, open your mouth to drop. A free face-controlled browser game powered by AI face detection.",
+    applicationCategory: "GameApplication",
+    operatingSystem: "Web Browser",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    author: {
+      "@type": "Person",
+      name: "Sander de Snaijer",
+      url: "https://www.sanderdesnaijer.com/",
+    },
+    browserRequirements:
+      "Requires a modern browser with webcam access (Chrome, Firefox, Edge, Safari)",
+  };
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <Navigation />
         <main className="min-h-screen pt-14">{children}</main>
         <footer className="mt-12 border-t border-white/5 bg-neutral-950 py-12 text-center">
