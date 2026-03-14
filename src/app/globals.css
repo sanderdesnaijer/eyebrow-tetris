@@ -186,8 +186,12 @@ h1,
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.tetromino-ghost {
-  /* Hologram ghost - styled inline */
+.neon-input {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.neon-input:focus {
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
 }
 
 @keyframes neon-flash {

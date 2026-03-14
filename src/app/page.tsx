@@ -58,11 +58,6 @@ export default function HomePage() {
     pendingQualifiesRef.current = null;
   };
 
-  const handleScoreSubmitted = () => {
-    setShowScoreModal(false);
-    setGameStats(null);
-  };
-
   const handleScoreModalClose = () => {
     setShowScoreModal(false);
     setGameStats(null);
@@ -277,7 +272,7 @@ export default function HomePage() {
       {showScoreModal && gameStats && (
         <ScoreSubmitModal
           stats={gameStats}
-          onSubmit={handleScoreSubmitted}
+          onSubmit={handleScoreModalClose}
           onClose={handleScoreModalClose}
         />
       )}

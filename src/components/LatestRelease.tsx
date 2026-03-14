@@ -2,25 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { GITHUB_OWNER, GITHUB_REPO } from "@/lib/constants";
+import { formatDate } from "@/lib/utils";
 
 interface Release {
   tag_name: string;
   name: string;
   published_at: string;
   html_url: string;
-}
-
-const GITHUB_OWNER =
-  process.env.NEXT_PUBLIC_GITHUB_OWNER || "sanderdesnaijer";
-const GITHUB_REPO =
-  process.env.NEXT_PUBLIC_GITHUB_REPO || "eyebrow-tetris";
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function LatestRelease() {

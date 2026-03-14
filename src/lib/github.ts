@@ -1,3 +1,5 @@
+import { GITHUB_OWNER, GITHUB_REPO } from "@/lib/constants";
+
 export interface GitHubRelease {
   id: number;
   tag_name: string;
@@ -6,9 +8,6 @@ export interface GitHubRelease {
   published_at: string;
   html_url: string;
 }
-
-const GITHUB_OWNER = process.env.NEXT_PUBLIC_GITHUB_OWNER || "sanderdesnaijer";
-const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || "eyebrow-tetris";
 
 export async function fetchReleases(): Promise<GitHubRelease[]> {
   try {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchLeaderboard, type LeaderboardEntry, type InputMode } from "@/lib/supabase";
+import { formatDate } from "@/lib/utils";
 
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -29,15 +30,6 @@ export default function LeaderboardPage() {
   }, [inputModeFilter]);
 
   const sortedEntries = [...entries].sort((a, b) => b[sortField] - a[sortField]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">

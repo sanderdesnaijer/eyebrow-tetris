@@ -1,6 +1,7 @@
 "use client";
 
 import type { GameStats } from "./TetrisOverlay";
+import { GameStatsDisplay } from "./GameStatsDisplay";
 
 interface GameOverModalProps {
   stats: GameStats;
@@ -20,19 +21,10 @@ export function GameOverModal({ stats, onClose, onPlayAgain }: GameOverModalProp
           GAME OVER
         </h2>
 
-        <div className="mb-6 space-y-2 text-center">
-          <p className="neon-text-pink text-3xl font-bold text-[var(--accent)]">
-            {stats.score.toLocaleString()}
-          </p>
-          <p className="text-sm text-zinc-400">
-            Level {stats.level} · {stats.lines} lines
-          </p>
-          <p
-            className={`text-sm ${stats.inputMode === "eyebrow" ? "text-green-400" : "text-amber-400"}`}
-          >
-            {stats.inputMode === "eyebrow" ? "👁️ Eyebrow" : "⌨️ Keyboard"} mode
-          </p>
-        </div>
+        <GameStatsDisplay
+          stats={stats}
+          scoreClassName="neon-text-pink text-3xl font-bold text-[var(--accent)]"
+        />
 
         {!isZeroScore && (
           <p className="mb-6 text-center text-sm text-zinc-500">
