@@ -82,8 +82,13 @@ export default function PrivacyPage() {
           </ul>
           <p className="mt-3 leading-relaxed text-zinc-400">
             This data is stored in Supabase, a secure database service. We do
-            not collect any personal information, email addresses, or tracking
-            data.
+            not collect any personal information or email addresses.
+          </p>
+          <p className="mt-3 leading-relaxed text-zinc-400">
+            We also use Google Analytics to collect anonymous usage statistics
+            such as page views, session duration, device and browser type, and
+            approximate geographic location. This data is aggregated and cannot
+            be used to identify individual users.
           </p>
         </section>
 
@@ -130,6 +135,23 @@ export default function PrivacyPage() {
                   className="text-[var(--blue)] hover:underline"
                 >
                   supabase.com/privacy
+                </a>
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-zinc-200">Google Analytics</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                We use Google Analytics 4 to understand how people use the site
+                (e.g. which pages are visited and how long sessions last). Google
+                Analytics uses cookies to collect aggregated, anonymous data. No
+                personally identifiable information is sent. See{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--blue)] hover:underline"
+                >
+                  Google&apos;s Privacy Policy
                 </a>
               </p>
             </div>

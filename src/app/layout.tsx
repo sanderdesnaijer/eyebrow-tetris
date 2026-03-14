@@ -131,10 +131,22 @@ export default function RootLayout({
         <footer className="mt-12 border-t border-[var(--blue)]/10 bg-[#06060f] py-12 text-center">
           <nav className="mb-8 flex flex-wrap justify-center gap-8">
             <Link
+              href="/"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
+            >
+              Play Eyebrow Tetris
+            </Link>
+            <Link
               href="/how-to-play"
               className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
             >
               How to Play
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
+            >
+              Leaderboard
             </Link>
             <Link
               href="/credits"

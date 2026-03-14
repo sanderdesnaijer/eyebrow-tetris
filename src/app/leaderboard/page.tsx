@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { fetchLeaderboard, type LeaderboardEntry, type InputMode } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
 
@@ -34,9 +35,8 @@ export default function LeaderboardPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       <h1 className="neon-text-cyan pixel-font mb-6 text-center text-2xl text-[var(--blue)]">
-        LEADERBOARD
+        EYEBROW TETRIS LEADERBOARD
       </h1>
-
       {/* Input Mode Tabs */}
       <div className="mb-6 flex justify-center gap-2">
         <button
@@ -213,6 +213,47 @@ export default function LeaderboardPage() {
           </div>
         </>
       )}
+
+      <section className="mt-12 space-y-8">
+        <div className="neon-card rounded-lg p-6 text-center">
+          <p className="mb-4 text-lg text-zinc-300">
+            Can you beat these players?
+          </p>
+          <Link
+            href="/"
+            className="inline-block rounded-xl bg-accent px-8 py-3 text-base font-bold text-accent-foreground transition hover:bg-accent-hover"
+            style={{ boxShadow: "0 0 15px rgba(255, 46, 99, 0.4), 0 0 40px rgba(255, 46, 99, 0.15)" }}
+          >
+            Play Eyebrow Tetris
+          </Link>
+        </div>
+
+        <div className="text-sm leading-relaxed text-zinc-400">
+          <p>
+            The Eyebrow Tetris leaderboard shows the highest scores achieved
+            using eyebrow and mouth controls. This browser game uses webcam face
+            tracking to control Tetris with your eyebrows — raise your left or
+            right eyebrow to move pieces, raise both to rotate, and open your
+            mouth to drop.
+          </p>
+          <p className="mt-3">
+            Think you can make it to the top?{" "}
+            <Link
+              href="/"
+              className="text-[var(--blue)] hover:underline"
+            >
+              Play Eyebrow Tetris
+            </Link>{" "}
+            and join the leaderboard. Not sure how it works?{" "}
+            <Link
+              href="/how-to-play"
+              className="text-[var(--blue)] hover:underline"
+            >
+              Learn how to control Tetris with your eyebrows
+            </Link>.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

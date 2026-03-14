@@ -14,6 +14,10 @@ export const metadata: Metadata = {
     "eyebrow tetris high scores",
     "face tetris top scores",
     "face controlled game rankings",
+    "webcam tetris leaderboard",
+    "highest score eyebrow tetris",
+    "webcam game high scores",
+    "face controlled tetris rankings",
   ],
   openGraph: {
     title: "Leaderboard - Eyebrow Tetris Top Scores",
