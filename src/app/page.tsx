@@ -121,6 +121,22 @@ export default function HomePage() {
             and right, raise both to rotate, and open your mouth to drop faster.
           </p>
 
+          <div
+            className="mx-auto mb-10 w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--blue)]/15"
+            style={{
+              boxShadow:
+                "0 0 30px rgba(0, 240, 255, 0.08), 0 0 60px rgba(176, 0, 255, 0.04)",
+            }}
+          >
+            <iframe
+              src="https://www.youtube.com/embed/caKzOIyuYm0"
+              title="Eyebrow Tetris gameplay demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="aspect-[9/16] w-full"
+            />
+          </div>
+
           <div className="grid gap-6 text-left md:grid-cols-2">
             <div className="neon-card rounded-lg p-6">
               <h2 className="mb-3 text-lg font-semibold text-[var(--accent)]">
