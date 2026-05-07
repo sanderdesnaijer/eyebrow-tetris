@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/constants";
 import { BreadcrumbJsonLd } from "@/components/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Play Eyebrow Tetris - Face & Webcam Controls Guide",
+  title: "How to Play Eyebrow Tetris with Face Controls",
   description:
     "Learn how to play Eyebrow Tetris — the free webcam Tetris game controlled by facial expressions. Master eyebrow and mouth gestures for face-controlled gaming.",
   alternates: {
@@ -125,7 +125,9 @@ export default function HowToPlayPage() {
 
   return (
     <>
-      <BreadcrumbJsonLd items={[{ name: "How to Play", path: "/how-to-play" }]} />
+      <BreadcrumbJsonLd
+        items={[{ name: "How to Play", path: "/how-to-play" }]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -135,190 +137,191 @@ export default function HowToPlayPage() {
           HOW TO PLAY
         </h1>
 
-      <div className="space-y-12">
-        <section>
-          <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
-            Face Controls
-          </h2>
-          <p className="mb-6 text-zinc-400">
-            Eyebrow Tetris uses your camera to detect facial expressions. Here
-            are the gestures you&apos;ll need to master:
-          </p>
+        <div className="space-y-12">
+          <section>
+            <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
+              Face Controls
+            </h2>
+            <p className="mb-6 text-zinc-400">
+              Eyebrow Tetris uses your camera to detect facial expressions. Here
+              are the gestures you&apos;ll need to master:
+            </p>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {controls.map((control) => (
-              <div
-                key={control.gesture}
-                className="neon-card rounded-lg p-5"
-              >
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-xl text-[var(--accent)]">
-                    {control.icon}
-                  </span>
-                  <div>
-                    <h3 className="font-medium text-white">{control.gesture}</h3>
-                    <p className="text-sm text-[var(--accent)]">
-                      {control.action}
-                    </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {controls.map((control) => (
+                <div key={control.gesture} className="neon-card rounded-lg p-5">
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-xl text-[var(--accent)]">
+                      {control.icon}
+                    </span>
+                    <div>
+                      <h3 className="font-medium text-white">
+                        {control.gesture}
+                      </h3>
+                      <p className="text-sm text-[var(--accent)]">
+                        {control.action}
+                      </p>
+                    </div>
                   </div>
+                  <p className="text-sm text-zinc-500">{control.tip}</p>
                 </div>
-                <p className="text-sm text-zinc-500">{control.tip}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
 
-        <section>
-          <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
-            Keyboard Controls
-          </h2>
-          <p className="mb-6 text-zinc-400">
-            You can also use your keyboard as a backup or combine it with face
-            controls:
-          </p>
+          <section>
+            <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
+              Keyboard Controls
+            </h2>
+            <p className="mb-6 text-zinc-400">
+              You can also use your keyboard as a backup or combine it with face
+              controls:
+            </p>
 
-          <div className="neon-card overflow-x-auto rounded-lg">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[var(--blue)]/10 bg-[rgba(10,10,30,0.8)]">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Key
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {keyboardControls.map((control) => (
-                  <tr
-                    key={control.key}
-                    className="border-b border-[var(--blue)]/5"
-                  >
-                    <td className="px-4 py-3">
-                      <code className="rounded bg-zinc-800 px-2 py-1 text-sm text-[var(--accent)]">
-                        {control.key}
-                      </code>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-300">{control.action}</td>
+            <div className="neon-card overflow-x-auto rounded-lg">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--blue)]/10 bg-[rgba(10,10,30,0.8)]">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
+                      Key
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
+                      Action
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
-            Tips for Best Results
-          </h2>
-
-          <div className="space-y-4">
-            <div className="neon-card rounded-lg p-5">
-              <h3 className="mb-2 font-medium text-white">
-                1. Good Lighting
-              </h3>
-              <p className="text-sm text-zinc-400">
-                Make sure your face is well-lit, preferably with light coming
-                from in front of you. Avoid backlighting (bright windows behind
-                you).
-              </p>
+                </thead>
+                <tbody>
+                  {keyboardControls.map((control) => (
+                    <tr
+                      key={control.key}
+                      className="border-b border-[var(--blue)]/5"
+                    >
+                      <td className="px-4 py-3">
+                        <code className="rounded bg-zinc-800 px-2 py-1 text-sm text-[var(--accent)]">
+                          {control.key}
+                        </code>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-300">
+                        {control.action}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </section>
 
-            <div className="neon-card rounded-lg p-5">
-              <h3 className="mb-2 font-medium text-white">
-                2. Face the Camera
-              </h3>
-              <p className="text-sm text-zinc-400">
-                Position yourself so your full face is visible in the camera.
-                The detection works best when you&apos;re looking directly at
-                the screen.
-              </p>
+          <section>
+            <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
+              Tips for Best Results
+            </h2>
+
+            <div className="space-y-4">
+              <div className="neon-card rounded-lg p-5">
+                <h3 className="mb-2 font-medium text-white">
+                  1. Good Lighting
+                </h3>
+                <p className="text-sm text-zinc-400">
+                  Make sure your face is well-lit, preferably with light coming
+                  from in front of you. Avoid backlighting (bright windows
+                  behind you).
+                </p>
+              </div>
+
+              <div className="neon-card rounded-lg p-5">
+                <h3 className="mb-2 font-medium text-white">
+                  2. Face the Camera
+                </h3>
+                <p className="text-sm text-zinc-400">
+                  Position yourself so your full face is visible in the camera.
+                  The detection works best when you&apos;re looking directly at
+                  the screen.
+                </p>
+              </div>
+
+              <div className="neon-card rounded-lg p-5">
+                <h3 className="mb-2 font-medium text-white">
+                  3. Exaggerate Movements
+                </h3>
+                <p className="text-sm text-zinc-400">
+                  Don&apos;t be subtle! Raise your eyebrows high and open your
+                  mouth wide. The gestures need to be clear for reliable
+                  detection.
+                </p>
+              </div>
+
+              <div className="neon-card rounded-lg p-5">
+                <h3 className="mb-2 font-medium text-white">
+                  4. Watch the Feedback
+                </h3>
+                <p className="text-sm text-zinc-400">
+                  The control feedback panel (top-left during gameplay) shows
+                  what the game is detecting. Use it to calibrate your
+                  expressions.
+                </p>
+              </div>
+
+              <div className="neon-card rounded-lg p-5">
+                <h3 className="mb-2 font-medium text-white">
+                  5. Practice Individual Eyebrows
+                </h3>
+                <p className="text-sm text-zinc-400">
+                  Moving one eyebrow at a time can be tricky! Practice raising
+                  each eyebrow independently. If it&apos;s too hard, you can
+                  always use keyboard controls.
+                </p>
+              </div>
             </div>
+          </section>
 
+          <section>
+            <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
+              Scoring
+            </h2>
             <div className="neon-card rounded-lg p-5">
-              <h3 className="mb-2 font-medium text-white">
-                3. Exaggerate Movements
-              </h3>
-              <p className="text-sm text-zinc-400">
-                Don&apos;t be subtle! Raise your eyebrows high and open your
-                mouth wide. The gestures need to be clear for reliable
-                detection.
-              </p>
+              <ul className="space-y-3 text-zinc-400">
+                <li className="flex items-start gap-3">
+                  <span className="text-[var(--accent)]">•</span>
+                  <span>
+                    Clear lines to score points. More lines at once = more
+                    points.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[var(--accent)]">•</span>
+                  <span>Points are multiplied by your current level.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[var(--accent)]">•</span>
+                  <span>
+                    Every 10 lines cleared advances you to the next level.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[var(--accent)]">•</span>
+                  <span>
+                    Higher levels mean faster piece drops - more challenging but
+                    more rewarding!
+                  </span>
+                </li>
+              </ul>
             </div>
+          </section>
 
-            <div className="neon-card rounded-lg p-5">
-              <h3 className="mb-2 font-medium text-white">
-                4. Watch the Feedback
-              </h3>
-              <p className="text-sm text-zinc-400">
-                The control feedback panel (top-left during gameplay) shows what
-                the game is detecting. Use it to calibrate your expressions.
-              </p>
-            </div>
-
-            <div className="neon-card rounded-lg p-5">
-              <h3 className="mb-2 font-medium text-white">
-                5. Practice Individual Eyebrows
-              </h3>
-              <p className="text-sm text-zinc-400">
-                Moving one eyebrow at a time can be tricky! Practice raising
-                each eyebrow independently. If it&apos;s too hard, you can
-                always use keyboard controls.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="mb-6 text-xl font-semibold text-[var(--accent)]">
-            Scoring
-          </h2>
-          <div className="neon-card rounded-lg p-5">
-            <ul className="space-y-3 text-zinc-400">
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--accent)]">•</span>
-                <span>
-                  Clear lines to score points. More lines at once = more points.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--accent)]">•</span>
-                <span>
-                  Points are multiplied by your current level.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--accent)]">•</span>
-                <span>
-                  Every 10 lines cleared advances you to the next level.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--accent)]">•</span>
-                <span>
-                  Higher levels mean faster piece drops - more challenging but
-                  more rewarding!
-                </span>
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="neon-card rounded-lg p-6 text-center">
-          <p className="text-zinc-400">
-            Ready to compete? Check the{" "}
-            <Link
-              href="/leaderboard"
-              className="text-[var(--blue)] hover:underline"
-            >
-              leaderboard
-            </Link>{" "}
-            to see how you stack up against other players.
-          </p>
-        </section>
+          <section className="neon-card rounded-lg p-6 text-center">
+            <p className="text-zinc-400">
+              Ready to compete? Check the{" "}
+              <Link
+                href="/leaderboard"
+                className="text-[var(--blue)] hover:underline"
+              >
+                leaderboard
+              </Link>{" "}
+              to see how you stack up against other players.
+            </p>
+          </section>
+        </div>
       </div>
-    </div>
     </>
   );
 }
