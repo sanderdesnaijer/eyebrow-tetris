@@ -126,7 +126,7 @@ export default function HowToPlayPage() {
   return (
     <>
       <BreadcrumbJsonLd
-        items={[{ name: "How to Play", path: "/how-to-play" }]}
+        items={[{ name: "How to Play Eyebrow Tetris", path: "/how-to-play" }]}
       />
       <script
         type="application/ld+json"
@@ -134,7 +134,7 @@ export default function HowToPlayPage() {
       />
       <div className="mx-auto max-w-4xl px-4 py-12">
         <h1 className="neon-text-cyan pixel-font mb-8 text-center text-2xl text-[var(--blue)]">
-          HOW TO PLAY
+          HOW TO PLAY Eyebrow Tetris
         </h1>
 
         <div className="space-y-12">
