@@ -1,18 +1,16 @@
-# Eyebrow Tetris
+# Eyebrow Tetris: Face-Controlled Browser Tetris Game
 
 **Play Tetris with your face.** Raise your eyebrows to move pieces, open your mouth to drop.
 
-A free, browser-based Tetris game powered by AI webcam face detection. No download needed.
+A free, browser-based Tetris game powered by real-time MediaPipe face mesh tracking. No download needed. Camera data never leaves your browser.
 
 <p align="center">
   <a href="https://eyebrow-tetris.sanderdesnaijer.com">
-    <img src="public/og-image.png" alt="Eyebrow Tetris — face-controlled Tetris game using webcam" width="600" />
+    <img src="public/og-image.png" alt="Eyebrow Tetris — face-controlled Tetris game using webcam and MediaPipe" width="600" />
   </a>
 </p>
 
-<p align="center">
-  <a href="https://eyebrow-tetris.sanderdesnaijer.com"><strong>Play Now</strong></a>
-</p>
+**[Play Now](https://eyebrow-tetris.sanderdesnaijer.com)** | **[Watch Demo](https://youtube.com/shorts/caKzOIyuYm0)** | **[Project Page](https://www.sanderdesnaijer.com/projects/eyebrow-tetris)** | **[Portfolio](https://www.sanderdesnaijer.com/)**
 
 ## Controls
 
@@ -107,6 +105,16 @@ Uses [Conventional Commits](https://www.conventionalcommits.org/) with automatic
 ## Privacy
 
 Camera data is processed entirely in the browser. No video is ever sent to any server. Only leaderboard data (nickname + score) is stored. See the [Privacy Policy](https://eyebrow-tetris.sanderdesnaijer.com/privacy).
+
+## Author
+
+**Sander de Snaijer** -- Frontend Developer
+
+* [Portfolio](https://www.sanderdesnaijer.com/)
+* [This project on sanderdesnaijer.com](https://www.sanderdesnaijer.com/projects/eyebrow-tetris)
+* [GitHub](https://github.com/sanderdesnaijer)
+* [X / Twitter](https://x.com/sanderdesnaijer)
+* [LinkedIn](https://www.linkedin.com/in/sanderdesnaijer)
 
 ## License
 
