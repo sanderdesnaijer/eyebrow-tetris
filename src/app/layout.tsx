@@ -166,6 +166,30 @@ export default function RootLayout({
             >
               Contact
             </a>
+            <a
+              href="https://www.sanderdesnaijer.com/projects/eyebrow-tetris"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
+            >
+              Project
+            </a>
+            <a
+              href="https://github.com/sanderdesnaijer/eyebrow-tetris"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://demos.sanderdesnaijer.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm uppercase tracking-widest text-zinc-400 transition-colors hover:text-[var(--blue)]"
+            >
+              More Demos
+            </a>
           </nav>
           <p className="text-xs text-zinc-400">
             © {new Date().getFullYear()} Eyebrow Tetris. All rights reserved.

@@ -108,10 +108,11 @@ Camera data is processed entirely in the browser. No video is ever sent to any s
 
 ## Author
 
-**Sander de Snaijer** -- Frontend Developer
+**Sander de Snaijer** / Frontend Developer
 
 * [Portfolio](https://www.sanderdesnaijer.com/)
 * [This project on sanderdesnaijer.com](https://www.sanderdesnaijer.com/projects/eyebrow-tetris)
+* [More demos](https://demos.sanderdesnaijer.com)
 * [GitHub](https://github.com/sanderdesnaijer)
 * [X / Twitter](https://x.com/sanderdesnaijer)
 * [LinkedIn](https://www.linkedin.com/in/sanderdesnaijer)
